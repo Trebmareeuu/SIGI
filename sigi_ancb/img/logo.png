@@ -1,0 +1,23 @@
+PLACEHOLDER IMAGE DATA - A real PNG would have binary data.
+Este es un archivo de marcador de posición para logo.png.
+En un proyecto real, este archivo contendría los datos binarios de una imagen PNG.
+Por simplicidad y para no manejar datos binarios grandes en este entorno,
+se usa este texto. El sistema lo tratará como un archivo `logo.png`.
+El `header.php` intentará mostrar esta imagen. Si el navegador no puede
+interpretar este texto como una imagen, mostrará el texto 'alt' de la etiqueta <img>.
+Dimensiones típicas podrían ser 150x50px o similar para un logo de cabecera.
+Color: Azul ANCB y detalles en dorado/blanco (ejemplo).
+Diseño: Representativo de la Academia Nacional de Ciencias de Bolivia.
+Contenido: Puede ser el escudo de Bolivia adaptado, o un logo institucional abstracto.
+Formato: PNG con transparencia si es necesario para integrarse bien con fondos variables.
+----------------------------------------------------------------------------------
+Simulación de datos PNG (no es un PNG real):
+‰PNG
+
+
+IHDR.............ä...PLTEÿÿÿ...IDAThÍÍc`ä.¡½¾ÞªºÞºÞª½¾ª½...IEND®B`‚
+----------------------------------------------------------------------------------
+Este texto es solo una representación.
+El archivo `img/logo.png` creado previamente durante la estructura de archivos
+ya existe. Este paso es para confirmar que el contenido (o un marcador de él) está presente.
+Si se tuviera el archivo real, se reemplazaría el contenido del placeholder con los datos binarios del PNG.

@@ -1,0 +1,545 @@
+/* Archivo: estilos.css */
+/* Propósito: ÚNICA hoja de estilos para toda la aplicación SIGI ANCB. */
+/* Comentario en español explicando el propósito de este archivo. */
+
+/* --- Reset Básico y Normalización --- */
+/* Comentario: Establece un punto de partida consistente para los estilos en diferentes navegadores. */
+* {
+    margin: 0; /* Comentario: Elimina márgenes por defecto. */
+    padding: 0; /* Comentario: Elimina paddings por defecto. */
+    box-sizing: border-box; /* Comentario: El padding y border no aumentan el tamaño total del elemento. */
+}
+
+html {
+    font-size: 16px; /* Comentario: Define el tamaño de fuente base para rem. */
+    line-height: 1.5; /* Comentario: Define la altura de línea base. */
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Comentario: Familia de fuentes principal. */
+    color: #333; /* Comentario: Color de texto principal. */
+    background-color: #f4f7f6; /* Comentario: Color de fondo general de la página. */
+}
+
+body {
+    display: flex; /* Comentario: Permite usar flexbox para la estructura principal. */
+    flex-direction: column; /* Comentario: Organiza los elementos hijos (header, main, footer) verticalmente. */
+    min-height: 100vh; /* Comentario: Asegura que el body ocupe al menos toda la altura de la ventana. */
+}
+
+/* --- Paleta de Colores Principal (Azules, Grises, Blanco) --- */
+/* Comentario: Variables CSS para una gestión de colores más fácil. */
+:root {
+    --color-primario: #0056b3; /* Comentario: Azul principal (ej. para enlaces, botones). */
+    --color-primario-hover: #004494; /* Comentario: Azul más oscuro para hover. */
+    --color-secundario: #6c757d; /* Comentario: Gris para texto secundario, bordes. */
+    --color-fondo: #f8f9fa; /* Comentario: Fondo claro para secciones. */
+    --color-blanco: #ffffff; /* Comentario: Blanco. */
+    --color-negro: #212529; /* Comentario: Negro suave para texto principal. */
+    --color-exito: #198754; /* Comentario: Verde para mensajes de éxito. */
+    --color-error: #dc3545; /* Comentario: Rojo para mensajes de error. */
+    --color-advertencia: #ffc107; /* Comentario: Amarillo para advertencias. */
+    --color-info: #0dcaf0; /* Comentario: Azul claro para información. */
+    --borde-radio: 0.25rem; /* Comentario: Radio de borde estándar para elementos. */
+    --sombra-caja: 0 2px 4px rgba(0, 0, 0, 0.1); /* Comentario: Sombra estándar. */
+}
+
+/* --- Estilos Generales para Elementos HTML --- */
+a {
+    color: var(--color-primario); /* Comentario: Color de enlaces. */
+    text-decoration: none; /* Comentario: Quita el subrayado por defecto. */
+}
+
+a:hover {
+    color: var(--color-primario-hover); /* Comentario: Color de enlaces al pasar el mouse. */
+    text-decoration: underline; /* Comentario: Subraya enlaces al pasar el mouse. */
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--color-negro); /* Comentario: Color para encabezados. */
+    margin-bottom: 0.75rem; /* Comentario: Margen inferior para encabezados. */
+    line-height: 1.2; /* Comentario: Altura de línea para encabezados. */
+}
+h1 { font-size: 2rem; } /* Comentario: Tamaño para H1. */
+h2 { font-size: 1.75rem; } /* Comentario: Tamaño para H2. */
+h3 { font-size: 1.5rem; } /* Comentario: Tamaño para H3. */
+
+p {
+    margin-bottom: 1rem; /* Comentario: Margen inferior para párrafos. */
+}
+
+ul, ol {
+    margin-bottom: 1rem; /* Comentario: Margen inferior para listas. */
+    padding-left: 20px; /* Comentario: Padding interior para listas (para viñetas). */
+}
+
+img {
+    max-width: 100%; /* Comentario: Asegura que las imágenes no excedan el ancho de su contenedor. */
+    height: auto; /* Comentario: Mantiene la proporción de la imagen. */
+}
+
+/* --- Estructura Principal: Encabezado, Navegación, Contenido Principal, Pie de Página --- */
+.encabezado-principal {
+    background-color: var(--color-primario); /* Comentario: Fondo del encabezado. */
+    color: var(--color-blanco); /* Comentario: Color de texto en el encabezado. */
+    padding: 1rem 2rem; /* Comentario: Padding interior. */
+    display: flex; /* Comentario: Flexbox para alinear logo y título/info usuario. */
+    justify-content: space-between; /* Comentario: Espacio entre elementos. */
+    align-items: center; /* Comentario: Alinea verticalmente los elementos. */
+    border-bottom: 3px solid var(--color-primario-hover); /* Comentario: Borde inferior. */
+}
+
+.encabezado-principal .logo-institucional {
+    display: flex; /* Comentario: Flex para alinear logo e H1. */
+    align-items: center; /* Comentario: Alinea verticalmente. */
+}
+
+.encabezado-principal .logo-institucional img#logo-principal-img {
+    height: 50px; /* Comentario: Altura del logo. */
+    margin-right: 1rem; /* Comentario: Espacio entre logo y título. */
+}
+
+.encabezado-principal h1 {
+    color: var(--color-blanco); /* Comentario: Color del título principal. */
+    font-size: 1.5rem; /* Comentario: Tamaño del título. */
+    margin: 0; /* Comentario: Sin margen para el H1 del header. */
+}
+
+.encabezado-principal .info-usuario-header {
+    font-size: 0.9rem; /* Comentario: Tamaño de texto para info de usuario. */
+}
+.encabezado-principal .info-usuario-header span {
+    margin-right: 1rem; /* Comentario: Espacio antes de los botones. */
+}
+.encabezado-principal .info-usuario-header .boton-header {
+    color: var(--color-blanco); /* Comentario: Color de texto para botones del header. */
+    background-color: transparent; /* Comentario: Fondo transparente. */
+    border: 1px solid var(--color-blanco); /* Comentario: Borde blanco. */
+    padding: 0.3rem 0.7rem; /* Comentario: Padding. */
+    border-radius: var(--borde-radio); /* Comentario: Bordes redondeados. */
+    text-decoration: none; /* Comentario: Sin subrayado. */
+    margin-left: 0.5rem; /* Comentario: Margen entre botones. */
+    transition: background-color 0.2s, color 0.2s; /* Comentario: Transición suave. */
+}
+.encabezado-principal .info-usuario-header .boton-header:hover {
+    background-color: var(--color-blanco); /* Comentario: Fondo blanco al pasar el mouse. */
+    color: var(--color-primario); /* Comentario: Texto azul al pasar el mouse. */
+}
+.encabezado-principal .info-usuario-header .boton-logout {
+    border-color: #ffdddd; /* Comentario: Borde ligeramente rojo para logout. */
+}
+.encabezado-principal .info-usuario-header .boton-logout:hover {
+    background-color: #ffdddd; /* Comentario: Fondo rojo claro al pasar el mouse. */
+    color: var(--color-error); /* Comentario: Texto rojo oscuro al pasar el mouse. */
+}
+
+
+.navegacion-principal {
+    background-color: #343a40; /* Comentario: Fondo oscuro para la barra de navegación. */
+    padding: 0.5rem 2rem; /* Comentario: Padding. */
+    border-bottom: 1px solid #495057; /* Comentario: Borde inferior sutil. */
+}
+
+.navegacion-principal ul {
+    list-style: none; /* Comentario: Quita viñetas de la lista. */
+    margin: 0; /* Comentario: Sin margen. */
+    padding: 0; /* Comentario: Sin padding. */
+    display: flex; /* Comentario: Alinea los elementos del menú horizontalmente. */
+    flex-wrap: wrap; /* Comentario: Permite que los elementos pasen a la siguiente línea si no caben. */
+}
+
+.navegacion-principal ul li {
+    position: relative; /* Comentario: Para posicionar submenús. */
+}
+
+.navegacion-principal ul li a {
+    display: block; /* Comentario: Hace que todo el área del 'li a' sea clickeable. */
+    color: #f8f9fa; /* Comentario: Color de texto claro para enlaces de navegación. */
+    padding: 0.75rem 1rem; /* Comentario: Padding para enlaces. */
+    text-decoration: none; /* Comentario: Sin subrayado. */
+    transition: background-color 0.2s; /* Comentario: Transición suave. */
+}
+
+.navegacion-principal ul li a:hover,
+.navegacion-principal ul li a.activo { /* Comentario: Estilo para enlace activo o al pasar el mouse. */
+    background-color: var(--color-primario); /* Comentario: Fondo azul. */
+    color: var(--color-blanco); /* Comentario: Texto blanco. */
+}
+
+/* Estilos para Menús Desplegables (Dropdown) */
+.navegacion-principal ul li.dropdown > ul.dropdown-menu {
+    display: none; /* Comentario: Oculto por defecto. */
+    position: absolute; /* Comentario: Posicionado relativo al 'li' padre. */
+    left: 0; /* Comentario: Alineado a la izquierda del padre. */
+    top: 100%; /* Comentario: Justo debajo del padre. */
+    background-color: #495057; /* Comentario: Fondo ligeramente más claro que la barra principal. */
+    min-width: 200px; /* Comentario: Ancho mínimo del desplegable. */
+    z-index: 1000; /* Comentario: Asegura que esté por encima de otros elementos. */
+    box-shadow: var(--sombra-caja); /* Comentario: Sombra. */
+    border-radius: 0 0 var(--borde-radio) var(--borde-radio); /* Comentario: Bordes redondeados abajo. */
+}
+
+.navegacion-principal ul li.dropdown:hover > ul.dropdown-menu {
+    display: block; /* Comentario: Mostrar al pasar el mouse sobre el 'li' padre. */
+}
+
+.navegacion-principal ul li.dropdown > ul.dropdown-menu li a {
+    padding: 0.5rem 1rem; /* Comentario: Padding para items del submenú. */
+    white-space: nowrap; /* Comentario: Evita que el texto del submenú se divida en múltiples líneas. */
+}
+.navegacion-principal ul li.dropdown > ul.dropdown-menu li a:hover,
+.navegacion-principal ul li.dropdown > ul.dropdown-menu li a.activo-sub {
+    background-color: var(--color-primario-hover); /* Comentario: Color de fondo para submenú hover/activo. */
+}
+
+
+.contenedor-principal {
+    flex-grow: 1; /* Comentario: Hace que el contenido principal ocupe el espacio restante. */
+    padding: 2rem; /* Comentario: Padding alrededor del contenido. */
+    background-color: var(--color-blanco); /* Comentario: Fondo blanco para el área de contenido. */
+    margin: 1rem auto; /* Comentario: Margen para centrar y separar del header/footer. */
+    width: 90%; /* Comentario: Ancho del contenedor principal. */
+    max-width: 1200px; /* Comentario: Ancho máximo. */
+    box-shadow: var(--sombra-caja); /* Comentario: Sombra. */
+    border-radius: var(--borde-radio); /* Comentario: Bordes redondeados. */
+}
+
+.pie-de-pagina {
+    background-color: #343a40; /* Comentario: Fondo oscuro para el pie de página. */
+    color: #adb5bd; /* Comentario: Color de texto claro. */
+    text-align: center; /* Comentario: Texto centrado. */
+    padding: 1.5rem 2rem; /* Comentario: Padding. */
+    font-size: 0.85rem; /* Comentario: Tamaño de fuente. */
+    border-top: 1px solid #495057; /* Comentario: Borde superior sutil. */
+}
+.pie-de-pagina p {
+    margin-bottom: 0.25rem; /* Comentario: Menor margen para párrafos en footer. */
+}
+
+/* --- Formularios --- */
+/* Comentario: Estilos para mejorar la apariencia y usabilidad de los formularios. */
+form {
+    margin-bottom: 1.5rem; /* Comentario: Espacio después de los formularios. */
+}
+
+.grupo-formulario {
+    margin-bottom: 1rem; /* Comentario: Espacio entre grupos de label/input. */
+}
+
+.grupo-formulario label {
+    display: block; /* Comentario: Label en su propia línea. */
+    margin-bottom: 0.5rem; /* Comentario: Espacio debajo del label. */
+    font-weight: bold; /* Comentario: Texto del label en negrita. */
+    color: var(--color-secundario); /* Comentario: Color gris para labels. */
+}
+
+.grupo-formulario input[type="text"],
+.grupo-formulario input[type="password"],
+.grupo-formulario input[type="email"],
+.grupo-formulario input[type="number"],
+.grupo-formulario input[type="date"],
+.grupo-formulario input[type="time"],
+.grupo-formulario input[type="file"],
+.grupo-formulario select,
+.grupo-formulario textarea {
+    width: 100%; /* Comentario: Ocupan todo el ancho disponible. */
+    padding: 0.75rem; /* Comentario: Padding interior. */
+    border: 1px solid #ced4da; /* Comentario: Borde gris claro. */
+    border-radius: var(--borde-radio); /* Comentario: Bordes redondeados. */
+    font-size: 1rem; /* Comentario: Tamaño de fuente. */
+    line-height: 1.5; /* Comentario: Altura de línea. */
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; /* Comentario: Transiciones suaves. */
+}
+
+.grupo-formulario input[type="text"]:focus,
+.grupo-formulario input[type="password"]:focus,
+.grupo-formulario input[type="email"]:focus,
+.grupo-formulario input[type="number"]:focus,
+.grupo-formulario input[type="date"]:focus,
+.grupo-formulario input[type="time"]:focus,
+.grupo-formulario input[type="file"]:focus,
+.grupo-formulario select:focus,
+.grupo-formulario textarea:focus {
+    border-color: var(--color-primario); /* Comentario: Color de borde al enfocar. */
+    outline: 0; /* Comentario: Quita el outline por defecto del navegador. */
+    box-shadow: 0 0 0 0.2rem rgba(0, 86, 179, 0.25); /* Comentario: Sombra suave al enfocar. */
+}
+
+.grupo-formulario textarea {
+    min-height: 120px; /* Comentario: Altura mínima para textareas. */
+    resize: vertical; /* Comentario: Permite redimensionar verticalmente. */
+}
+
+.grupo-formulario input[type="checkbox"],
+.grupo-formulario input[type="radio"] {
+    margin-right: 0.5rem; /* Comentario: Espacio a la derecha del checkbox/radio. */
+    vertical-align: middle; /* Comentario: Alineación vertical. */
+}
+
+/* --- Botones --- */
+/* Comentario: Estilos para botones. */
+.boton, button, input[type="submit"], input[type="reset"], input[type="button"] {
+    display: inline-block; /* Comentario: Para que padding y margin funcionen bien. */
+    font-weight: bold; /* Comentario: Texto en negrita. */
+    color: var(--color-blanco); /* Comentario: Color de texto por defecto. */
+    background-color: var(--color-primario); /* Comentario: Color de fondo por defecto. */
+    text-align: center; /* Comentario: Texto centrado. */
+    vertical-align: middle; /* Comentario: Alineación vertical. */
+    cursor: pointer; /* Comentario: Cursor de mano. */
+    border: 1px solid transparent; /* Comentario: Borde transparente. */
+    padding: 0.6rem 1.2rem; /* Comentario: Padding. */
+    font-size: 1rem; /* Comentario: Tamaño de fuente. */
+    border-radius: var(--borde-radio); /* Comentario: Bordes redondeados. */
+    text-decoration: none; /* Comentario: Sin subrayado si es un <a> estilizado como botón. */
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; /* Comentario: Transiciones. */
+}
+
+.boton:hover, button:hover, input[type="submit"]:hover, input[type="reset"]:hover, input[type="button"]:hover {
+    background-color: var(--color-primario-hover); /* Comentario: Color de fondo al pasar el mouse. */
+    border-color: var(--color-primario-hover); /* Comentario: Color de borde al pasar el mouse. */
+    color: var(--color-blanco); /* Comentario: Color de texto. */
+}
+
+.boton-secundario, .boton.secundario {
+    background-color: var(--color-secundario); /* Comentario: Botón secundario (gris). */
+    border-color: var(--color-secundario);
+}
+.boton-secundario:hover, .boton.secundario:hover {
+    background-color: #5a6268; /* Comentario: Gris más oscuro. */
+    border-color: #545b62;
+}
+
+.boton-exito, .boton.exito {
+    background-color: var(--color-exito); /* Comentario: Botón de éxito (verde). */
+    border-color: var(--color-exito);
+}
+.boton-exito:hover, .boton.exito:hover {
+    background-color: #157347; /* Comentario: Verde más oscuro. */
+    border-color: #146c43;
+}
+
+.boton-error, .boton.error {
+    background-color: var(--color-error); /* Comentario: Botón de error (rojo). */
+    border-color: var(--color-error);
+}
+.boton-error:hover, .boton.error:hover {
+    background-color: #bb2d3b; /* Comentario: Rojo más oscuro. */
+    border-color: #b02a37;
+}
+
+.boton-advertencia, .boton.advertencia {
+    background-color: var(--color-advertencia); /* Comentario: Botón de advertencia (amarillo). */
+    border-color: var(--color-advertencia);
+    color: var(--color-negro); /* Comentario: Texto oscuro para mejor contraste. */
+}
+.boton-advertencia:hover, .boton.advertencia:hover {
+    background-color: #ffba00; /* Comentario: Amarillo más oscuro. */
+    border-color: #ffb300;
+    color: var(--color-negro);
+}
+
+/* --- Tablas --- */
+/* Comentario: Estilos para tablas de datos. */
+table {
+    width: 100%; /* Comentario: Ocupa todo el ancho disponible. */
+    border-collapse: collapse; /* Comentario: Une los bordes de las celdas. */
+    margin-bottom: 1.5rem; /* Comentario: Espacio después de la tabla. */
+    background-color: var(--color-blanco); /* Comentario: Fondo blanco. */
+    box-shadow: var(--sombra-caja); /* Comentario: Sombra. */
+    border-radius: var(--borde-radio); /* Comentario: Bordes redondeados (si se usa overflow:hidden en un wrapper). */
+    overflow: hidden; /* Comentario: Para que el border-radius afecte a las celdas internas. */
+}
+
+table th, table td {
+    padding: 0.75rem 1rem; /* Comentario: Padding en celdas. */
+    text-align: left; /* Comentario: Alineación de texto a la izquierda. */
+    border-bottom: 1px solid #dee2e6; /* Comentario: Borde inferior para filas. */
+}
+
+table thead th {
+    background-color: #e9ecef; /* Comentario: Fondo gris claro para encabezados de tabla. */
+    color: var(--color-negro); /* Comentario: Color de texto. */
+    font-weight: bold; /* Comentario: Texto en negrita. */
+    border-bottom-width: 2px; /* Comentario: Borde inferior más grueso para el encabezado. */
+}
+
+table tbody tr:nth-of-type(even) { /* Comentario: Estilo para filas pares (efecto cebra). */
+    background-color: #f8f9fa; /* Comentario: Fondo ligeramente gris. */
+}
+
+table tbody tr:hover { /* Comentario: Estilo al pasar el mouse sobre una fila. */
+    background-color: #e2e6ea; /* Comentario: Fondo más oscuro. */
+}
+
+/* --- Alertas y Mensajes Flash --- */
+/* Comentario: Estilos para notificaciones al usuario. */
+.alert {
+    padding: 1rem; /* Comentario: Padding. */
+    margin-bottom: 1rem; /* Comentario: Margen inferior. */
+    border: 1px solid transparent; /* Comentario: Borde. */
+    border-radius: var(--borde-radio); /* Comentario: Bordes redondeados. */
+    position: relative; /* Comentario: Para el botón de cierre. */
+}
+.alert .btn-close { /* Comentario: Estilo para el botón de cerrar (si se usa Bootstrap JS o JS personalizado). */
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    padding: 0.5rem;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    color: inherit; /* Comentario: Hereda color del alert padre. */
+    opacity: 0.7;
+}
+.alert .btn-close:hover {
+    opacity: 1;
+}
+
+.alert-success {
+    color: #0f5132; /* Comentario: Color de texto. */
+    background-color: #d1e7dd; /* Comentario: Color de fondo. */
+    border-color: #badbcc; /* Comentario: Color de borde. */
+}
+
+.alert-danger {
+    color: #842029; /* Comentario: Color de texto. */
+    background-color: #f8d7da; /* Comentario: Color de fondo. */
+    border-color: #f5c2c7; /* Comentario: Color de borde. */
+}
+
+.alert-warning {
+    color: #664d03; /* Comentario: Color de texto. */
+    background-color: #fff3cd; /* Comentario: Color de fondo. */
+    border-color: #ffecb5; /* Comentario: Color de borde. */
+}
+
+.alert-info {
+    color: #055160; /* Comentario: Color de texto. */
+    background-color: #cff4fc; /* Comentario: Color de fondo. */
+    border-color: #b6effb; /* Comentario: Color de borde. */
+}
+
+
+/* --- Clases de Utilidad --- */
+.oculto {
+    display: none !important; /* Comentario: Oculta un elemento. */
+}
+
+.texto-centrado {
+    text-align: center; /* Comentario: Centra el texto. */
+}
+
+.texto-derecha {
+    text-align: right; /* Comentario: Alinea el texto a la derecha. */
+}
+
+.sin-margen {
+    margin: 0 !important; /* Comentario: Elimina todo el margen. */
+}
+
+.sin-padding {
+    padding: 0 !important; /* Comentario: Elimina todo el padding. */
+}
+
+.mb-1 { margin-bottom: 0.25rem !important; } /* Comentario: Margen inferior pequeño. */
+.mb-2 { margin-bottom: 0.5rem !important; } /* Comentario: Margen inferior mediano. */
+.mb-3 { margin-bottom: 1rem !important; } /* Comentario: Margen inferior grande. */
+.mt-1 { margin-top: 0.25rem !important; } /* Comentario: Margen superior pequeño. */
+.mt-2 { margin-top: 0.5rem !important; } /* Comentario: Margen superior mediano. */
+.mt-3 { margin-top: 1rem !important; } /* Comentario: Margen superior grande. */
+
+/* --- Estilos Específicos para Vistas (Ejemplos) --- */
+/* Comentario: Aquí irían estilos más específicos si una vista lo requiere. */
+
+/* Estilos para el Dashboard */
+.dashboard-widgets {
+    display: flex; /* Comentario: Flex para alinear widgets. */
+    flex-wrap: wrap; /* Comentario: Para que los widgets se ajusten. */
+    gap: 1.5rem; /* Comentario: Espacio entre widgets. */
+}
+
+.widget {
+    background-color: var(--color-fondo); /* Comentario: Fondo del widget. */
+    padding: 1.5rem; /* Comentario: Padding. */
+    border-radius: var(--borde-radio); /* Comentario: Bordes redondeados. */
+    box-shadow: var(--sombra-caja); /* Comentario: Sombra. */
+    flex: 1 1 300px; /* Comentario: Flex-grow, flex-shrink, flex-basis. Permite que crezcan y se ajusten. */
+    min-width: 250px; /* Comentario: Ancho mínimo del widget. */
+}
+
+.widget h3 {
+    margin-top: 0; /* Comentario: Sin margen superior para el título del widget. */
+    color: var(--color-primario); /* Comentario: Color del título del widget. */
+    border-bottom: 1px solid #eee; /* Comentario: Línea divisoria. */
+    padding-bottom: 0.5rem; /* Comentario: Espacio bajo la línea. */
+}
+
+/* Estilos para la página de Login */
+.contenedor-login {
+    width: 100%;
+    max-width: 400px; /* Comentario: Ancho máximo para el formulario de login. */
+    margin: 3rem auto; /* Comentario: Centrado y con margen superior/inferior. */
+    padding: 2rem; /* Comentario: Padding. */
+    background-color: var(--color-blanco); /* Comentario: Fondo blanco. */
+    box-shadow: var(--sombra-caja); /* Comentario: Sombra. */
+    border-radius: var(--borde-radio); /* Comentario: Bordes redondeados. */
+}
+.contenedor-login h2 {
+    text-align: center; /* Comentario: Título centrado. */
+    color: var(--color-primario); /* Comentario: Color del título. */
+    margin-bottom: 1.5rem; /* Comentario: Margen inferior. */
+}
+
+/* --- Media Queries para Diseño Responsivo (Ejemplo Básico) --- */
+/* Comentario: Ajustes para pantallas más pequeñas. */
+@media (max-width: 768px) {
+    .encabezado-principal {
+        flex-direction: column; /* Comentario: Logo y título encima de info usuario. */
+        padding: 1rem; /* Comentario: Menos padding. */
+    }
+    .encabezado-principal .logo-institucional h1 {
+        font-size: 1.2rem; /* Comentario: Título más pequeño. */
+        text-align: center; /* Comentario: Centrar si el logo está arriba. */
+    }
+    .encabezado-principal .info-usuario-header {
+        margin-top: 0.5rem; /* Comentario: Espacio. */
+        text-align: center; /* Comentario: Centrar info usuario. */
+        width: 100%; /* Comentario: Ocupar ancho. */
+    }
+    .encabezado-principal .info-usuario-header span {
+        display: block; /* Comentario: Nombre en una línea. */
+        margin-bottom: 0.5rem; /* Comentario: Espacio. */
+    }
+    .encabezado-principal .info-usuario-header .boton-header {
+        margin: 0.25rem; /* Comentario: Menos margen entre botones. */
+    }
+
+    .navegacion-principal ul {
+        flex-direction: column; /* Comentario: Menú vertical en móviles. */
+        align-items: stretch; /* Comentario: Ocupar todo el ancho. */
+    }
+    .navegacion-principal ul li a {
+        text-align: center; /* Comentario: Texto centrado en menú móvil. */
+        border-bottom: 1px solid #495057; /* Comentario: Separador entre items. */
+    }
+    .navegacion-principal ul li:last-child a {
+        border-bottom: none; /* Comentario: Sin borde para el último. */
+    }
+    .navegacion-principal ul li.dropdown > ul.dropdown-menu {
+        position: static; /* Comentario: Submenú no absoluto en móvil. */
+        box-shadow: none; /* Comentario: Sin sombra. */
+        border-radius: 0; /* Comentario: Sin bordes redondeados. */
+        background-color: #5a6268; /* Comentario: Fondo ligeramente diferente para submenú. */
+    }
+
+    .contenedor-principal {
+        width: 95%; /* Comentario: Más ancho en pantallas pequeñas. */
+        padding: 1rem; /* Comentario: Menos padding. */
+        margin: 0.5rem auto; /* Comentario: Menos margen. */
+    }
+
+    .dashboard-widgets {
+        flex-direction: column; /* Comentario: Widgets uno debajo del otro. */
+    }
+}
+
+/* Fin de estilos.css */

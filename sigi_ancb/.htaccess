@@ -1,0 +1,88 @@
+# Archivo: .htaccess
+# Propósito: Configuración para el servidor web Apache.
+# Incluye reglas de reescritura de URL para enrutar peticiones a index.php (front controller)
+# y otras directivas de seguridad o rendimiento si son necesarias.
+# Comentario en español explicando el propósito de este archivo.
+
+# --- Opciones de Motor de Reescritura ---
+# Comentario: Activa el motor de reescritura de Apache.
+RewriteEngine On
+
+# Comentario: Define la base para las reglas de reescritura.
+# Comentario: Si la aplicación está en un subdirectorio (ej. /sigi_ancb/), esta línea es importante.
+# Comentario: Si está en el raíz del dominio, puede ser solo '/' o estar comentada si Apache lo infiere bien.
+# Comentario: Ajustar según la ubicación del proyecto en el servidor.
+RewriteBase /sigi_ancb/
+# Comentario: Si estuviera en el root del dominio, sería: RewriteBase /
+
+# --- Reglas de Reescritura para el Front Controller (index.php) ---
+
+# Comentario: Evita que las reglas se apliquen a archivos y directorios existentes.
+# Comentario: Si la petición es para un archivo que existe físicamente (-f), no la reescribe.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+# Comentario: Si la petición es para un directorio que existe físicamente (-d), no la reescribe.
+RewriteCond %{REQUEST_FILENAME} -d
+# Comentario: Si alguna de las condiciones anteriores es verdadera, no aplica la siguiente RewriteRule.
+RewriteRule ^ - [L]
+
+# Comentario: Reenvía todas las demás peticiones a index.php.
+# Comentario: ^(.*)$ captura toda la URI solicitada.
+# Comentario: index.php?vista=$1 pasa la URI capturada como un parámetro 'vista' a index.php.
+# Comentario: [L] indica que es la última regla a procesar si coincide.
+# Comentario: [QSA] (Query String Append) anexa cualquier cadena de consulta original a la URL reescrita.
+RewriteRule ^(.*)$ index.php?vista=$1 [L,QSA]
+
+
+# --- Otras Configuraciones (Opcional) ---
+
+# Comentario: Protección contra el listado de directorios.
+# Comentario: Evita que los visitantes vean el contenido de directorios que no tienen un archivo índice.
+Options -Indexes
+
+# Comentario: Forzar HTTPS (si está disponible y configurado en el servidor).
+# Comentario: Descomentar estas líneas si se tiene un certificado SSL y se quiere forzar HTTPS.
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Comentario: Establecer el charset por defecto para las respuestas del servidor.
+# Comentario: Aunque PHP también puede establecer esto, es una buena práctica.
+AddDefaultCharset UTF-8
+
+# Comentario: Control de caché para ciertos tipos de archivo (ejemplo).
+# Comentario: Esto puede mejorar el rendimiento al reducir las solicitudes al servidor.
+# <IfModule mod_expires.c>
+#   ExpiresActive On
+#   ExpiresByType image/jpg "access plus 1 year"
+#   ExpiresByType image/jpeg "access plus 1 year"
+#   ExpiresByType image/gif "access plus 1 year"
+#   ExpiresByType image/png "access plus 1 year"
+#   ExpiresByType text/css "access plus 1 month"
+#   ExpiresByType application/javascript "access plus 1 month"
+#   ExpiresByType application/x-javascript "access plus 1 month"
+#   ExpiresByType image/x-icon "access plus 1 year"
+# </IfModule>
+
+# Comentario: Prevención de acceso a archivos sensibles.
+# Comentario: Bloquea el acceso directo a archivos que no deberían ser públicamente accesibles.
+# <Files ".env">
+#    Require all denied
+# </Files>
+# <Files "config.php">
+#    Require all denied
+# </Files>
+# <Files "schema.sql">
+#    Require all denied
+# </Files>
+# <FilesMatch "^\.ht">
+#   Require all denied
+# </FilesMatch>
+# Comentario: Nota: Bloquear config.php aquí podría ser problemático si se accede directamente
+# Comentario: de alguna manera no prevista, pero generalmente está protegido por estar fuera del DocumentRoot
+# Comentario: o por la lógica de inclusión de PHP. La principal protección es no tenerlo en un directorio público.
+# Comentario: Los archivos en php_includes/ no serán accesibles si están fuera del DocumentRoot o si no hay
+# Comentario: una regla específica que permita su acceso (y no deberían tener acceso directo).
+
+# Comentario: Fin del archivo .htaccess
+# Comentario: Asegurarse de que el módulo mod_rewrite de Apache esté habilitado en el servidor.
+# Comentario: La directiva `AllowOverride All` o `AllowOverride FileInfo Options` (o similar que permita .htaccess)
+# Comentario: debe estar configurada en la configuración del virtual host o directorio principal de Apache para que este archivo funcione.
