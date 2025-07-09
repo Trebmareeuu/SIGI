@@ -85,8 +85,9 @@ if (in_array($vista_limpia, $vistas_publicas)) {
         'activos_inventario' => 'VER_INVENTARIO_ACTIVOS', 'activos_asignar' => 'ASIGNAR_NUEVO_ACTIVO',
         'gestion_materiales_stock' => 'GESTIONAR_STOCK_MATERIALES',
         'reporte_materiales_stock' => 'VER_STOCK_MATERIALES',
-        'comunicados_admin' => 'CREAR_COMUNICADOS', // <-- Para administrar comunicados
-        'comunicados_lista' => 'VER_COMUNICADOS',   // <-- Para ver la lista de comunicados
+        'comunicados_admin' => 'CREAR_COMUNICADOS',
+        'comunicados_lista' => 'VER_COMUNICADOS',
+        'admin_reporte_vacaciones' => 'VER_REPORTE_VACACIONES_PERSONAL', // <-- Nuevo permiso y vista
         'archivo_prestamos' => 'GESTIONAR_PRESTAMOS_ARCHIVO', 'archivo_recepcion' => 'RECEPCIONAR_EXPEDIENTES_ARCHIVO',
     ];
 

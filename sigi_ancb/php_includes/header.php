@@ -178,18 +178,37 @@ if (verificar_sesion() && $id_usuario_actual && isset($_SESSION['id_rol'])) {
                         <?php if (tiene_permiso('VER_REPORTES_ASISTENCIA')): ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=asistencia_reportes" class="<?php echo ($vista_actual == 'asistencia_reportes') ? 'activo-sub' : ''; ?>">Reportes Asistencia</a></li>
                         <?php endif; ?>
-                        <?php if (tiene_permiso('GESTIONAR_STOCK_MATERIALES')): // Dir. Admin también puede gestionar stock ?>
+                        <?php if (tiene_permiso('GESTIONAR_STOCK_MATERIALES')): ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=gestion_materiales_stock" class="<?php echo ($vista_actual == 'gestion_materiales_stock') ? 'activo-sub' : ''; ?>">Catálogo Materiales (Stock)</a></li>
                         <?php endif; ?>
-                        <?php if (tiene_permiso('VER_STOCK_MATERIALES')): // Dir. Admin también puede ver reportes de stock ?>
+                        <?php if (tiene_permiso('VER_STOCK_MATERIALES')): ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=reporte_materiales_stock" class="<?php echo ($vista_actual == 'reporte_materiales_stock') ? 'activo-sub' : ''; ?>">Reporte Stock/Movimientos</a></li>
+                        <?php endif; ?>
+                        <?php if (tiene_permiso('VER_REPORTE_VACACIONES_PERSONAL')): ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=admin_reporte_vacaciones" class="<?php echo ($vista_actual == 'admin_reporte_vacaciones') ? 'activo-sub' : ''; ?>">Reporte Vacaciones Personal</a></li>
                         <?php endif; ?>
                     </ul>
                 </li>
             <?php endif; ?>
 
             <!-- Comentario: Módulo de MAE (Director General Ejecutivo). -->
-            <?php if (tiene_permiso('DELEGAR_AUTORIDAD_SISTEMA')): ?>
+            <?php
+            // Comentario: El MAE también puede tener un menú de reportes o accesos directos.
+            $menu_mae_visible = tiene_permiso('DELEGAR_AUTORIDAD_SISTEMA') || tiene_permiso('VER_REPORTE_VACACIONES_PERSONAL');
+            if ($menu_mae_visible):
+            ?>
+            <li class="dropdown">
+                <a href="#" class="<?php echo ($vista_actual == 'sistema_delegacion' || $vista_actual == 'admin_reporte_vacaciones') ? 'activo' : ''; ?>">Dirección Ejecutiva (MAE)</a>
+                <ul class="dropdown-menu">
+                    <?php if (tiene_permiso('DELEGAR_AUTORIDAD_SISTEMA')): ?>
+                        <li><a href="<?php echo BASE_URL; ?>index.php?vista=sistema_delegacion" class="<?php echo ($vista_actual == 'sistema_delegacion') ? 'activo-sub' : ''; ?>">Delegar Autoridad</a></li>
+                    <?php endif; ?>
+                    <?php if (tiene_permiso('VER_REPORTE_VACACIONES_PERSONAL')): ?>
+                        <li><a href="<?php echo BASE_URL; ?>index.php?vista=admin_reporte_vacaciones" class="<?php echo ($vista_actual == 'admin_reporte_vacaciones') ? 'activo-sub' : ''; ?>">Reporte Vacaciones Personal</a></li>
+                    <?php endif; ?>
+                </ul>
+            </li>
+            <?php elseif (tiene_permiso('DELEGAR_AUTORIDAD_SISTEMA')): // Caso donde solo tiene delegar y no otros items de MAE ?>
                  <li><a href="<?php echo BASE_URL; ?>index.php?vista=sistema_delegacion" class="<?php echo ($vista_actual == 'sistema_delegacion') ? 'activo' : ''; ?>">Delegar Autoridad</a></li>
             <?php endif; ?>
 

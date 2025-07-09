@@ -34,14 +34,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['importar_csv_biometri
                     $fila++;
 
                     // Comentario: Consulta para insertar, intentando enlazar id_empleado_biometrico con personal_fichas.codigo_empleado.
+                    // Comentario: Corregido para seleccionar id_usuario de la tabla usuarios unida con personal_fichas.
                     $sql_insert = "INSERT INTO asistencia (id_empleado_biometrico, fecha_hora_marcacion, tipo_marcacion, origen_dato, id_usuario_sistema)
                                    VALUES (:id_bio, :fecha_hora, :tipo, 'importacion_csv',
-                                           (SELECT pf.id_usuario FROM personal_fichas pf WHERE pf.codigo_empleado = :id_bio_codigo_empleado LIMIT 1)
+                                           (SELECT u.id_usuario
+                                            FROM usuarios u
+                                            JOIN personal_fichas pf ON u.id_usuario = pf.id_usuario
+                                            WHERE pf.codigo_empleado = :id_bio_codigo_empleado LIMIT 1)
                                           )
                                    ON DUPLICATE KEY UPDATE id_asistencia=id_asistencia";
                                    // Comentario: ON DUPLICATE KEY UPDATE requiere un índice UNIQUE en (id_empleado_biometrico, fecha_hora_marcacion) para funcionar como se espera.
-                                   // Comentario: Si no existe ese índice, podría dar error o insertar duplicados si otras columnas difieren.
-                                   // Comentario: Alternativamente, se podría hacer un SELECT previo para verificar duplicidad.
+                                   // Comentario: Este índice ya fue añadido al schema.sql.
 
                     $stmt_insert = $pdo->prepare($sql_insert);
 
