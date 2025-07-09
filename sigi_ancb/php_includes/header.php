@@ -40,6 +40,33 @@ if ($id_usuario_actual) {
 // Comentario: Determinar la vista actual para marcar el enlace activo en el menú.
 $vista_actual = $_GET['vista'] ?? 'dashboard'; // Comentario: 'dashboard' es la vista por defecto si no se especifica.
 
+// Comentario: Lógica para notificación de comunicados nuevos/pendientes.
+$num_comunicados_nuevos = 0;
+if (verificar_sesion() && $id_usuario_actual && isset($_SESSION['id_rol'])) {
+    global $pdo; // Comentario: Asegurarse que $pdo esté disponible.
+    $id_rol_actual_com = $_SESSION['id_rol'];
+    $condiciones_notif_com = "c.estado = 'publicado' AND c.fecha_publicacion <= NOW() AND (c.fecha_expiracion IS NULL OR c.fecha_expiracion > NOW())";
+    $condiciones_notif_com .= " AND (c.para_roles IS NULL OR JSON_CONTAINS(c.para_roles, CAST(:id_rol_notif AS JSON), '$'))";
+
+    // Comentario: Opcional: Excluir leídos si se implementa la tabla `comunicados_leidos_usuarios`
+    // $condiciones_notif_com .= " AND c.id_comunicado NOT IN (SELECT clu.id_comunicado FROM comunicados_leidos_usuarios clu WHERE clu.id_usuario = :id_usuario_actual_notif)";
+
+    $sql_notif_com = "SELECT COUNT(DISTINCT c.id_comunicado) as total_nuevos
+                      FROM comunicados c
+                      WHERE $condiciones_notif_com";
+    try {
+        $stmt_notif_com = $pdo->prepare($sql_notif_com);
+        $params_notif_com = [':id_rol_notif' => (string)$id_rol_actual_com];
+        // if (strpos($condiciones_notif_com, ':id_usuario_actual_notif') !== false) {
+        //     $params_notif_com[':id_usuario_actual_notif'] = $id_usuario_actual;
+        // }
+        $stmt_notif_com->execute($params_notif_com);
+        $num_comunicados_nuevos = (int)$stmt_notif_com->fetchColumn();
+    } catch (PDOException $e) {
+        error_log("Error al contar comunicados para notificación: " . $e->getMessage());
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="es"> <!-- Comentario: Establece el idioma de la página a español. -->
@@ -151,6 +178,12 @@ $vista_actual = $_GET['vista'] ?? 'dashboard'; // Comentario: 'dashboard' es la 
                         <?php if (tiene_permiso('VER_REPORTES_ASISTENCIA')): ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=asistencia_reportes" class="<?php echo ($vista_actual == 'asistencia_reportes') ? 'activo-sub' : ''; ?>">Reportes Asistencia</a></li>
                         <?php endif; ?>
+                        <?php if (tiene_permiso('GESTIONAR_STOCK_MATERIALES')): // Dir. Admin también puede gestionar stock ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=gestion_materiales_stock" class="<?php echo ($vista_actual == 'gestion_materiales_stock') ? 'activo-sub' : ''; ?>">Catálogo Materiales (Stock)</a></li>
+                        <?php endif; ?>
+                        <?php if (tiene_permiso('VER_STOCK_MATERIALES')): // Dir. Admin también puede ver reportes de stock ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=reporte_materiales_stock" class="<?php echo ($vista_actual == 'reporte_materiales_stock') ? 'activo-sub' : ''; ?>">Reporte Stock/Movimientos</a></li>
+                        <?php endif; ?>
                     </ul>
                 </li>
             <?php endif; ?>
@@ -179,15 +212,28 @@ $vista_actual = $_GET['vista'] ?? 'dashboard'; // Comentario: 'dashboard' es la 
             <?php endif; ?>
 
             <!-- Comentario: Módulo de Activos Fijos. -->
-            <?php if (tiene_permiso('VER_INVENTARIO_ACTIVOS') || tiene_permiso('ASIGNAR_NUEVO_ACTIVO')): ?>
+            <?php
+            // Comentario: Combinar permisos para el menú desplegable de Activos Fijos y Materiales de Escritorio
+            $puede_ver_menu_activos = tiene_permiso('VER_INVENTARIO_ACTIVOS') ||
+                                      tiene_permiso('ASIGNAR_NUEVO_ACTIVO') ||
+                                      (tiene_permiso('GESTIONAR_STOCK_MATERIALES') && $rol_usuario_actual === 'Encargado de Activos Fijos'); // Solo mostrar gestión de stock aquí si es Enc. Activos Fijos
+
+            if ($puede_ver_menu_activos):
+            ?>
                 <li class="dropdown">
-                    <a href="#" class="<?php echo (strpos($vista_actual, 'activos_') === 0) ? 'activo' : ''; ?>">Activos Fijos</a>
+                    <a href="#" class="<?php echo (strpos($vista_actual, 'activos_') === 0 || ($vista_actual == 'gestion_materiales_stock' && $rol_usuario_actual === 'Encargado de Activos Fijos') ) ? 'activo' : ''; ?>">Activos y Materiales</a>
                     <ul class="dropdown-menu">
                         <?php if (tiene_permiso('VER_INVENTARIO_ACTIVOS')): ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=activos_inventario" class="<?php echo ($vista_actual == 'activos_inventario') ? 'activo-sub' : ''; ?>">Inventario</a></li>
                         <?php endif; ?>
                         <?php if (tiene_permiso('ASIGNAR_NUEVO_ACTIVO')): ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=activos_asignar" class="<?php echo ($vista_actual == 'activos_asignar') ? 'activo-sub' : ''; ?>">Asignar Activo</a></li>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=activos_asignar" class="<?php echo ($vista_actual == 'activos_asignar') ? 'activo-sub' : ''; ?>">Registrar/Asignar Activo Fijo</a></li>
+                        <?php endif; ?>
+                        <?php if (tiene_permiso('GESTIONAR_STOCK_MATERIALES') && $rol_usuario_actual === 'Encargado de Activos Fijos'): ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=gestion_materiales_stock" class="<?php echo ($vista_actual == 'gestion_materiales_stock') ? 'activo-sub' : ''; ?>">Catálogo Materiales (Stock)</a></li>
+                        <?php endif; ?>
+                         <?php if (tiene_permiso('VER_STOCK_MATERIALES') && $rol_usuario_actual === 'Encargado de Activos Fijos'): // Si el de activos fijos también puede ver el reporte consolidado ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=reporte_materiales_stock" class="<?php echo ($vista_actual == 'reporte_materiales_stock') ? 'activo-sub' : ''; ?>">Reporte Stock/Movimientos</a></li>
                         <?php endif; ?>
                     </ul>
                 </li>
@@ -203,6 +249,24 @@ $vista_actual = $_GET['vista'] ?? 'dashboard'; // Comentario: 'dashboard' es la 
                         <?php endif; ?>
                         <?php if (tiene_permiso('RECEPCIONAR_EXPEDIENTES_ARCHIVO')): ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=archivo_recepcion" class="<?php echo ($vista_actual == 'archivo_recepcion') ? 'activo-sub' : ''; ?>">Recepción Expedientes</a></li>
+                        <?php endif; ?>
+                    </ul>
+                </li>
+            <?php endif; ?>
+
+            <!-- Comentario: Módulo de Comunicados (Ver para todos, Crear para roles específicos) -->
+            <?php if (tiene_permiso('VER_COMUNICADOS')): ?>
+                <li class="dropdown">
+                     <a href="#" class="<?php echo (strpos($vista_actual, 'comunicados_') === 0) ? 'activo' : ''; ?>">
+                        Comunicados
+                        <?php if ($num_comunicados_nuevos > 0): ?>
+                            <span class="badge-notificacion"><?php echo $num_comunicados_nuevos; ?></span>
+                        <?php endif; ?>
+                     </a>
+                     <ul class="dropdown-menu">
+                        <li><a href="<?php echo BASE_URL; ?>index.php?vista=comunicados_lista" class="<?php echo ($vista_actual == 'comunicados_lista') ? 'activo-sub' : ''; ?>">Ver Comunicados</a></li>
+                        <?php if (tiene_permiso('CREAR_COMUNICADOS')): ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=comunicados_admin" class="<?php echo ($vista_actual == 'comunicados_admin') ? 'activo-sub' : ''; ?>">Gestionar Comunicados</a></li>
                         <?php endif; ?>
                     </ul>
                 </li>

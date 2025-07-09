@@ -1,123 +1,10 @@
 <?php
-// Archivo: vistas/vacaciones_aprobacion_mae.php
-// Propósito: (MAE) Bandeja para aprobar o rechazar solicitudes de vacación derivadas por Secretaría.
+// Archivo: vistas/vacaciones_aprobacion_mae.php (VERSIÓN CORREGIDA - SOLO PRESENTACIÓN)
+// Propósito: (MAE) Bandeja para aprobar o rechazar solicitudes de vacación - Parte Visual HTML.
 // Comentario en español explicando el propósito de este archivo.
 
-$id_usuario_actual = obtener_id_usuario_actual();
-if (!tiene_permiso('APROBAR_VACACIONES_MAE', $id_usuario_actual)) {
-    mensaje_flash('error_vac_aprob_mae', 'No tiene permisos para acceder a esta función.', 'alert-danger');
-    redirigir('index.php?vista=dashboard');
-}
-
-global $pdo;
-$solicitudes_pendientes_mae = [];
-
-// Comentario: Paginación.
-$pagina_actual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
-$regs_por_pagina = 10;
-$offset = ($pagina_actual - 1) * $regs_por_pagina;
-$total_regs = 0;
-
-try {
-    // Comentario: Contar total de solicitudes pendientes de aprobación por MAE.
-    $sql_count = "SELECT COUNT(*)
-                  FROM solicitudes s
-                  WHERE s.tipo_solicitud = 'vacacion'
-                  AND s.estado_solicitud = 'pendiente_aprobacion_mae'";
-    $stmt_count = $pdo->prepare($sql_count);
-    $stmt_count->execute();
-    $total_regs = (int)$stmt_count->fetchColumn();
-
-    // Comentario: Obtener solicitudes pendientes de aprobación por MAE.
-    $sql = "SELECT s.id_solicitud, s.fecha_solicitud, s.fecha_inicio_vacacion, s.fecha_fin_vacacion, s.dias_solicitados_vacacion,
-                   s.descripcion_solicitud, s.observaciones_gestion as obs_secretaria,
-                   u.nombres as solicitante_nombres, u.apellidos as solicitante_apellidos, u.cargo as solicitante_cargo
-            FROM solicitudes s
-            JOIN usuarios u ON s.id_usuario_solicitante = u.id_usuario
-            WHERE s.tipo_solicitud = 'vacacion' AND s.estado_solicitud = 'pendiente_aprobacion_mae'
-            ORDER BY s.fecha_solicitud ASC
-            LIMIT :limit OFFSET :offset";
-    $stmt = $pdo->prepare($sql);
-    $stmt->bindParam(':limit', $regs_por_pagina, PDO::PARAM_INT);
-    $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-    $stmt->execute();
-    $solicitudes_pendientes_mae = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $e) {
-    error_log("Error al cargar solicitudes de vacación para aprobación MAE: " . $e->getMessage());
-    mensaje_flash('error_vac_aprob_mae', 'Ocurrió un error al cargar las solicitudes. Intente más tarde.', 'alert-danger');
-}
-
-$total_paginas = ceil($total_regs / $regs_por_pagina);
-
-// Comentario: Procesamiento de acciones (aprobar, rechazar).
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion_aprobacion_vacacion'])) {
-    $id_solicitud_accion = filter_input(INPUT_POST, 'id_solicitud', FILTER_VALIDATE_INT);
-    $accion = $_POST['accion_aprobacion_vacacion']; // 'aprobar_vacacion' o 'rechazar_vacacion'
-    $motivo_decision_mae = strip_tags($_POST['motivo_decision_mae'] ?? '');
-
-    if ($id_solicitud_accion) {
-        $pdo->beginTransaction();
-        try {
-            $nuevo_estado = '';
-            $mensaje_historial = '';
-            $campo_motivo_rechazo = null;
-
-            if ($accion === 'aprobar_vacacion') {
-                $nuevo_estado = 'aprobada';
-                $mensaje_historial = "Solicitud de vacación APROBADA por MAE.";
-                if (!empty($motivo_decision_mae)) {
-                    $mensaje_historial .= " Comentario MAE: " . $motivo_decision_mae;
-                }
-            } elseif ($accion === 'rechazar_vacacion') {
-                if (empty($motivo_decision_mae)) {
-                    throw new Exception("El motivo del rechazo es obligatorio.");
-                }
-                $nuevo_estado = 'rechazada';
-                $campo_motivo_rechazo = $motivo_decision_mae;
-                $mensaje_historial = "Solicitud de vacación RECHAZADA por MAE. Motivo: " . $motivo_decision_mae;
-            } else {
-                throw new Exception("Acción no válida.");
-            }
-
-            $sql_update = "UPDATE solicitudes
-                           SET estado_solicitud = :nuevo_estado,
-                               id_usuario_aprobador = :id_mae,
-                               fecha_aprobacion_rechazo = NOW(),
-                               motivo_rechazo = :motivo_rechazo,
-                               observaciones_gestion = CONCAT(IFNULL(observaciones_gestion,''), '\nDecisión MAE (', NOW(), '): ', :obs_mae)
-                           WHERE id_solicitud = :id_solicitud
-                           AND estado_solicitud = 'pendiente_aprobacion_mae'"; // Comentario: Doble check de estado.
-
-            $stmt_update = $pdo->prepare($sql_update);
-            $stmt_update->execute([
-                ':nuevo_estado' => $nuevo_estado,
-                ':id_mae' => $id_usuario_actual,
-                ':motivo_rechazo' => $campo_motivo_rechazo,
-                ':obs_mae' => $motivo_decision_mae, // Comentario: Se guarda como observación general también.
-                ':id_solicitud' => $id_solicitud_accion
-            ]);
-
-            if ($stmt_update->rowCount() > 0) {
-                // registrar_historial_solicitud($id_solicitud_accion, $id_usuario_actual, 'Decisión MAE Vacación', $mensaje_historial);
-                mensaje_flash('exito_vac_aprob_mae', 'Decisión sobre la solicitud ID ' . $id_solicitud_accion . ' registrada exitosamente.', 'alert-success');
-            } else {
-                 throw new Exception("No se pudo actualizar la solicitud. Puede que ya haya sido procesada o no exista.");
-            }
-
-            $pdo->commit();
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            error_log("Error en acción aprobación vacación MAE: " . $e->getMessage());
-            mensaje_flash('error_vac_aprob_mae_accion', 'Error al procesar la decisión: ' . $e->getMessage(), 'alert-danger');
-        }
-        redirigir('index.php?vista=vacaciones_aprobacion_mae&pagina=' . $pagina_actual); // Comentario: Recargar.
-    } else {
-        mensaje_flash('error_vac_aprob_mae_accion', 'ID de solicitud no válido para la acción.', 'alert-danger');
-        redirigir('index.php?vista=vacaciones_aprobacion_mae');
-    }
-}
-
+// Comentario: Las variables $solicitudes_pendientes_mae, $pagina_actual, $total_paginas
+// Comentario: son definidas en logica/vacaciones_aprobacion_mae_logica.php
 ?>
 <h2>Aprobación de Solicitudes de Vacación (MAE)</h2>
 <p>Revise las siguientes solicitudes de vacación y tome la acción correspondiente (aprobar o rechazar).</p>
@@ -158,22 +45,18 @@ mensaje_flash('exito_vac_aprob_mae');
                         <td>
                             <?php
                             $just_corta_mae = mb_substr(strip_tags($sol['descripcion_solicitud']), 0, 50);
-                            echo htmlspecialchars($just_corta_mae, ENT_QUOTES, 'UTF-8') . (mb_strlen($sol['descripcion_solicitud']) > 50 ? '...' : '');
+                            echo htmlspecialchars($just_corta_mae, ENT_QUOTES, 'UTF-8') . (mb_strlen(strip_tags($sol['descripcion_solicitud'])) > 50 ? '...' : '');
                             ?>
-                            <button class="boton-tabla ver-detalle-solicitud-mae"
+                            <button class="boton-tabla ver-detalle-solicitud-modal-mae"
                                     data-id-solicitud="<?php echo $sol['id_solicitud']; ?>"
                                     data-descripcion="<?php echo htmlspecialchars(nl2br(strip_tags($sol['descripcion_solicitud'])), ENT_QUOTES, 'UTF-8'); ?>"
-                                    title="Ver Justificación Completa">👁️</button>
+                                    data-obs-secretaria="<?php echo htmlspecialchars(nl2br(strip_tags($sol['obs_secretaria'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
+                                    title="Ver Justificación Completa y Obs. Secretaría">👁️</button>
                         </td>
-                        <td>
+                        <td class="obs-previas-col" title="<?php echo htmlspecialchars(strip_tags($sol['obs_secretaria'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
                             <?php
                             $obs_sec_corta = mb_substr(strip_tags($sol['obs_secretaria'] ?? ''), 0, 40);
-                            echo htmlspecialchars($obs_sec_corta, ENT_QUOTES, 'UTF-8') . (mb_strlen($sol['obs_secretaria'] ?? '') > 40 ? '...' : '');
-                             if(!empty($sol['obs_secretaria'])) {
-                                echo ' <button class="boton-tabla ver-obs-secretaria-mae"
-                                        data-obs-secretaria="'.htmlspecialchars(nl2br(strip_tags($sol['obs_secretaria'])), ENT_QUOTES, 'UTF-8').'"
-                                        title="Ver Observaciones de Secretaría">📄</button>';
-                             }
+                            echo htmlspecialchars($obs_sec_corta, ENT_QUOTES, 'UTF-8') . (mb_strlen(strip_tags($sol['obs_secretaria'] ?? '')) > 40 ? '...' : '');
                             ?>
                         </td>
                         <td>
@@ -184,7 +67,7 @@ mensaje_flash('exito_vac_aprob_mae');
                                     <textarea name="motivo_decision_mae" id="motivo_mae_<?php echo $sol['id_solicitud']; ?>" rows="2" placeholder="Opcional para aprobar, obligatorio para rechazar"></textarea>
                                 </div>
                                 <button type="submit" name="accion_aprobacion_vacacion" value="aprobar_vacacion" class="boton-tabla exito confirmar-accion" data-mensaje-confirmacion="¿Está seguro de APROBAR esta solicitud de vacación?" title="Aprobar Solicitud">✔️ Aprobar</button>
-                                <button type="submit" name="accion_aprobacion_vacacion" value="rechazar_vacacion" class="boton-tabla error confirmar-accion" data-mensaje-confirmacion="¿Está seguro de RECHAZAR esta solicitud? Se requerirá un motivo." title="Rechazar Solicitud">❌ Rechazar</button>
+                                <button type="submit" name="accion_aprobacion_vacacion" value="rechazar_vacacion" class="boton-tabla error confirmar-accion" data-mensaje-confirmacion="¿Está seguro de RECHAZAR esta solicitud? Se requerirá un motivo en el campo de comentario." title="Rechazar Solicitud">❌ Rechazar</button>
                             </form>
                         </td>
                     </tr>
@@ -217,7 +100,7 @@ mensaje_flash('exito_vac_aprob_mae');
 <!-- Modal para ver detalle de justificación y obs de secretaría -->
 <div id="modalDetalleSolicitudMAE" class="modal-sigi oculto">
     <div class="modal-contenido-sigi">
-        <span class="modal-cerrar-sigi" onclick="document.getElementById('modalDetalleSolicitudMAE').classList.add('oculto');">&times;</span>
+        <span class="modal-cerrar-sigi" id="cerrarModalDetalleSolMAE">&times;</span>
         <h4>Detalles de Solicitud (ID: <span id="modalIdSolicitudFullMAE"></span>)</h4>
 
         <div id="modalSeccionJustificacionMAE">
@@ -225,70 +108,61 @@ mensaje_flash('exito_vac_aprob_mae');
             <div id="modalDescripcionCompletaFullMAE" class="modal-texto-scroll"></div>
         </div>
 
-        <div id="modalSeccionObsSecretariaMAE" class="oculto" style="margin-top:15px;">
+        <div id="modalSeccionObsSecretariaMAE" class="oculto mt-2">
             <p><strong>Observaciones de Secretaría:</strong></p>
-            <div id="modalObsSecretariaFullMAE" class="modal-texto-scroll"></div>
+            <div id="modalObsSecretariaFullMAE" class="modal-texto-scroll" style="background-color: #e9ecef;"></div>
         </div>
     </div>
 </div>
 
 <style>
-/* Comentario: Estilos heredados o similares a vacaciones_control_secretaria.php y otros. */
+/* Comentario: Estilos específicos para esta vista (si son necesarios y no están en estilos.css global). */
 .form-accion-bandeja .grupo-formulario-sm { margin-bottom: 5px; }
 .form-accion-bandeja .grupo-formulario-sm label { font-size: 0.8em; }
-.form-accion-bandeja textarea { width: 100%; font-size: 0.9em; padding: 3px; border: 1px solid #ccc; border-radius: 3px; }
+.form-accion-bandeja textarea { width: 100%; font-size: 0.9em; padding: 3px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box;}
 .form-accion-bandeja .boton-tabla { margin-top: 5px; margin-right: 5px; font-size:0.85em; padding: 4px 8px;}
-.boton-tabla.exito { background-color: var(--color-exito); color:white; }
-.boton-tabla.error { background-color: var(--color-error); color:white; }
-.modal-texto-scroll { white-space: pre-wrap; background-color:#f9f9f9; padding:10px; border-radius:4px; max-height:200px; overflow-y:auto; border: 1px solid #eee;}
+.boton-tabla.exito { background-color: var(--color-exito); color:white; border:none; }
+.boton-tabla.error { background-color: var(--color-error); color:white; border:none; }
+.obs-previas-col { font-size: 0.8em; color: #555; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+.modal-texto-scroll { white-space: pre-wrap; background-color:#f9f9f9; padding:10px; border: 1px solid #eee; border-radius:4px; max-height:200px; overflow-y:auto; }
+.mt-2 { margin-top: 0.5rem !important; }
 </style>
 
 <script>
+// Comentario: JS para el modal.
 document.addEventListener('DOMContentLoaded', function() {
+    const botonesDetalleModalMAE = document.querySelectorAll('.ver-detalle-solicitud-modal-mae');
     const modalMAE = document.getElementById('modalDetalleSolicitudMAE');
-    const modalIdMAE = document.getElementById('modalIdSolicitudFullMAE');
-    const modalDescMAE = document.getElementById('modalDescripcionCompletaFullMAE');
-    const modalSeccionObsSecMAE = document.getElementById('modalSeccionObsSecretariaMAE');
-    const modalObsSecMAE = document.getElementById('modalObsSecretariaFullMAE');
+    const cerrarModalBtnMAE = document.getElementById('cerrarModalDetalleSolMAE');
 
-    document.querySelectorAll('.ver-detalle-solicitud-mae').forEach(boton => {
-        boton.addEventListener('click', function() {
-            if(modalIdMAE) modalIdMAE.textContent = this.dataset.idSolicitud;
-            if(modalDescMAE) modalDescMAE.innerHTML = this.dataset.descripcion;
+    const modalIdSpanMAE = document.getElementById('modalIdSolicitudFullMAE');
+    const modalDescDivMAE = document.getElementById('modalDescripcionCompletaFullMAE');
+    const modalSeccionObsSecDivMAE = document.getElementById('modalSeccionObsSecretariaMAE');
+    const modalObsSecDivMAE = document.getElementById('modalObsSecretariaFullMAE');
 
-            // Comentario: Limpiar sección de obs. secretaría por si no aplica a este ítem.
-            if(modalSeccionObsSecMAE) modalSeccionObsSecMAE.classList.add('oculto');
-            if(modalObsSecMAE) modalObsSecMAE.innerHTML = '';
+    if (modalMAE) {
+        botonesDetalleModalMAE.forEach(boton => {
+            boton.addEventListener('click', function() {
+                if(modalIdSpanMAE) modalIdSpanMAE.textContent = this.dataset.idSolicitud;
+                if(modalDescDivMAE) modalDescDivMAE.innerHTML = this.dataset.descripcion;
 
-            if(modalMAE) modalMAE.classList.remove('oculto');
+                if (this.dataset.obsSecretaria && this.dataset.obsSecretaria.trim() !== '' && modalObsSecDivMAE && modalSeccionObsSecDivMAE) {
+                    modalObsSecDivMAE.innerHTML = this.dataset.obsSecretaria;
+                    modalSeccionObsSecDivMAE.classList.remove('oculto');
+                } else if(modalSeccionObsSecDivMAE) {
+                    modalSeccionObsSecDivMAE.classList.add('oculto');
+                    if(modalObsSecDivMAE) modalObsSecDivMAE.innerHTML = '';
+                }
+                modalMAE.classList.remove('oculto');
+            });
         });
-    });
 
-    document.querySelectorAll('.ver-obs-secretaria-mae').forEach(boton => {
-        boton.addEventListener('click', function(event) {
-            event.stopPropagation(); // Comentario: Evitar que se dispare el click del botón de justificación si está anidado o cercano.
-            const idSol = this.closest('tr').querySelector('td:first-child').textContent; // Comentario: Obtener ID de la fila.
-            if(modalIdMAE) modalIdMAE.textContent = idSol; // Comentario: Actualizar ID en modal.
-
-            // Comentario: Mostrar la descripción principal también, por contexto.
-            const descPrincipal = this.closest('tr').querySelector('.ver-detalle-solicitud-mae').dataset.descripcion;
-            if(modalDescMAE) modalDescMAE.innerHTML = descPrincipal;
-
-            if(modalObsSecMAE && this.dataset.obsSecretaria) {
-                modalObsSecMAE.innerHTML = this.dataset.obsSecretaria;
-                if(modalSeccionObsSecMAE) modalSeccionObsSecMAE.classList.remove('oculto');
+        if (cerrarModalBtnMAE) {
+            cerrarModalBtnMAE.onclick = function() {
+                modalMAE.classList.add('oculto');
             }
-            if(modalMAE) modalMAE.classList.remove('oculto');
-        });
-    });
-
-    const modalCerrarBtnMAE = modalMAE ? modalMAE.querySelector('.modal-cerrar-sigi') : null;
-    if(modalCerrarBtnMAE) {
-        modalCerrarBtnMAE.onclick = function() {
-            if(modalMAE) modalMAE.classList.add('oculto');
         }
-    }
-    if(modalMAE) {
+
         modalMAE.addEventListener('click', function(event) {
             if (event.target === modalMAE) {
                 modalMAE.classList.add('oculto');
@@ -299,5 +173,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php
-// Comentario: Fin del archivo vistas/vacaciones_aprobacion_mae.php
+// Comentario: Fin del archivo vistas/vacaciones_aprobacion_mae.php (SOLO PRESENTACIÓN)
 ?>

@@ -193,7 +193,8 @@ CREATE TABLE `asistencia` (
   `tipo_marcacion` ENUM('entrada', 'salida', 'desconocido') DEFAULT 'desconocido', -- Si se puede determinar el tipo de marca
   `origen_dato` VARCHAR(100) DEFAULT 'importacion_csv', -- Origen del dato (ej. 'importacion_csv', 'manual')
   `fecha_importacion` TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Fecha de importación del registro
-  FOREIGN KEY (`id_usuario_sistema`) REFERENCES `usuarios`(`id_usuario`) ON DELETE SET NULL
+  FOREIGN KEY (`id_usuario_sistema`) REFERENCES `usuarios`(`id_usuario`) ON DELETE SET NULL,
+  UNIQUE KEY `idx_unica_marcacion` (`id_empleado_biometrico`, `fecha_hora_marcacion`) -- Para evitar duplicados exactos en importación.
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Registros de asistencia del personal';
 
 -- Tabla: personal_fichas
@@ -297,15 +298,15 @@ CREATE TABLE `sistema_delegaciones` (
 
 -- Roles básicos
 INSERT INTO `roles` (`nombre_rol`, `descripcion_rol`, `permisos`) VALUES
-('Funcionario Estándar', 'Acceso base para todos los empleados.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true}'),
-('Secretaria de Dirección', 'Gestiona correspondencia externa y flujo inicial de vacaciones.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "REGISTRAR_CORRESPONDENCIA_EXTERNA": true, "CONTROLAR_SOLICITUDES_VACACION_SECRETARIA": true}'),
-('Director Administrativo', 'Aprueba solicitudes de materiales/activos, gestiona pagos y asistencia.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "APROBAR_SOLICITUDES_ADMIN": true, "GESTIONAR_PAGOS": true, "IMPORTAR_BIOMETRICO": true, "VER_REPORTES_ASISTENCIA": true}'),
-('Director General Ejecutivo (MAE)', 'Máxima autoridad, aprueba vacaciones y puede delegar funciones.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "APROBAR_VACACIONES_MAE": true, "DELEGAR_AUTORIDAD_SISTEMA": true}'),
-('Técnico de Sistemas', 'Administra usuarios, roles y configuración del sistema.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "CRUD_USUARIOS_SISTEMA": true, "CRUD_ROLES_SISTEMA": true, "CONFIGURAR_SISTEMA": true}'),
-('Encargada de Presupuesto', 'Gestiona la ficha del personal.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "CRUD_PERSONAL_FICHA": true, "VER_DETALLE_PERSONAL_FICHA": true}'),
-('Mensajero', 'Visualiza hoja de ruta y registra entregas.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "VER_HOJA_RUTA_MENSAJERO": true}'),
-('Encargado de Activos Fijos', 'Gestiona el inventario y asignación de activos.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "VER_INVENTARIO_ACTIVOS": true, "ASIGNAR_NUEVO_ACTIVO": true}'),
-('Encargada de Archivo', 'Gestiona préstamos y recepción de expedientes físicos.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "GESTIONAR_PRESTAMOS_ARCHIVO": true, "RECEPCIONAR_EXPEDIENTES_ARCHIVO": true}');
+('Funcionario Estándar', 'Acceso base para todos los empleados.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "VER_COMUNICADOS": true}'),
+('Secretaria de Dirección', 'Gestiona correspondencia externa y flujo inicial de vacaciones.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "REGISTRAR_CORRESPONDENCIA_EXTERNA": true, "CONTROLAR_SOLICITUDES_VACACION_SECRETARIA": true, "VER_COMUNICADOS": true}'),
+('Director Administrativo', 'Aprueba solicitudes de materiales/activos, gestiona pagos y asistencia.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "APROBAR_SOLICITUDES_ADMIN": true, "GESTIONAR_PAGOS": true, "IMPORTAR_BIOMETRICO": true, "VER_REPORTES_ASISTENCIA": true, "GESTIONAR_STOCK_MATERIALES": true, "VER_STOCK_MATERIALES": true, "CREAR_COMUNICADOS": true, "VER_COMUNICADOS": true}'),
+('Director General Ejecutivo (MAE)', 'Máxima autoridad, aprueba vacaciones y puede delegar funciones.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "APROBAR_VACACIONES_MAE": true, "DELEGAR_AUTORIDAD_SISTEMA": true, "CREAR_COMUNICADOS": true, "VER_COMUNICADOS": true}'),
+('Técnico de Sistemas', 'Administra usuarios, roles y configuración del sistema.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "CRUD_USUARIOS_SISTEMA": true, "CRUD_ROLES_SISTEMA": true, "CONFIGURAR_SISTEMA": true, "VER_COMUNICADOS": true}'),
+('Encargada de Presupuesto', 'Gestiona la ficha del personal.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "CRUD_PERSONAL_FICHA": true, "VER_DETALLE_PERSONAL_FICHA": true, "VER_COMUNICADOS": true}'),
+('Mensajero', 'Visualiza hoja de ruta y registra entregas.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "VER_HOJA_RUTA_MENSAJERO": true, "VER_COMUNICADOS": true}'),
+('Encargado de Activos Fijos', 'Gestiona el inventario y asignación de activos.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "VER_INVENTARIO_ACTIVOS": true, "ASIGNAR_NUEVO_ACTIVO": true, "GESTIONAR_STOCK_MATERIALES": true, "VER_COMUNICADOS": true}'),
+('Encargada de Archivo', 'Gestiona préstamos y recepción de expedientes físicos.', '{"VER_PERFIL": true, "EDITAR_PERFIL": true, "VER_CORRESPONDENCIA_PROPIA": true, "REDACTAR_CORRESPONDENCIA_INTERNA": true, "VER_DETALLE_DOCUMENTO": true, "SOLICITAR_VACACION": true, "SOLICITAR_MATERIAL": true, "SOLICITAR_ACTIVO": true, "VER_HISTORIAL_SOLICITUDES_PROPIAS": true, "VER_DASHBOARD": true, "GESTIONAR_PRESTAMOS_ARCHIVO": true, "RECEPCIONAR_EXPEDIENTES_ARCHIVO": true, "VER_COMUNICADOS": true}');
 
 -- Usuario administrador de sistemas (ejemplo)
 -- Contraseña: 'admin123' (hashear correctamente en la aplicación antes de insertar)
@@ -371,4 +372,51 @@ INSERT INTO `sistema_configuracion` (`clave_config`, `valor_config`, `descripcio
 -- La contraseña del usuario admin es un placeholder y debe ser hasheada por la aplicación PHP al crear este usuario.
 -- Se ha añadido el estado 'para_archivar_fisico' a la tabla `archivo_expedientes`.
 -- Se han añadido permisos base a todos los roles insertados, incluyendo VER_DASHBOARD, VER_PERFIL, etc.
+
+-- Nuevas Tablas para Inventario de Materiales de Escritorio (Paso 2.1 del Plan Fase 2)
+
+-- Tabla: materiales_escritorio
+-- Almacena el catálogo de materiales de escritorio disponibles y su stock.
+CREATE TABLE `materiales_escritorio` (
+  `id_material` INT AUTO_INCREMENT PRIMARY KEY, -- Identificador único del material
+  `nombre_material` VARCHAR(200) NOT NULL UNIQUE, -- Nombre descriptivo del material (ej. 'Bolígrafo Azul BIC')
+  `descripcion_material` TEXT, -- Descripción adicional o características
+  `unidad_medida` VARCHAR(50) NOT NULL, -- Unidad de medida (ej. 'Unidad', 'Caja x10', 'Resma 500 hojas')
+  `stock_actual` INT NOT NULL DEFAULT 0, -- Cantidad actual en inventario
+  `punto_reorden` INT DEFAULT 0, -- Nivel de stock mínimo para generar alerta de recompra (opcional)
+  `fecha_creacion_material` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `fecha_modificacion_material` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Catálogo y stock de materiales de escritorio';
+
+-- Tabla: movimientos_materiales
+-- Registra todas las entradas y salidas de stock de los materiales de escritorio.
+CREATE TABLE `movimientos_materiales` (
+  `id_movimiento` INT AUTO_INCREMENT PRIMARY KEY, -- Identificador único del movimiento
+  `id_material` INT NOT NULL, -- Material afectado
+  `tipo_movimiento` ENUM('entrada', 'salida_solicitud', 'ajuste_positivo', 'ajuste_negativo') NOT NULL, -- Tipo de movimiento
+  `cantidad` INT NOT NULL, -- Cantidad de unidades movidas (positivo para entradas/ajustes+, negativo para salidas/ajustes-)
+  `fecha_movimiento` TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Fecha y hora del movimiento
+  `id_usuario_registra` INT NOT NULL, -- Usuario que registra el movimiento (ej. Enc. Activos Fijos, Dir. Admin)
+  `id_solicitud_asociada` INT NULL, -- Si es una 'salida_solicitud', el ID de la solicitud de material que la generó
+  `observaciones` TEXT, -- Observaciones adicionales sobre el movimiento
+  FOREIGN KEY (`id_material`) REFERENCES `materiales_escritorio`(`id_material`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  FOREIGN KEY (`id_usuario_registra`) REFERENCES `usuarios`(`id_usuario`),
+  FOREIGN KEY (`id_solicitud_asociada`) REFERENCES `solicitudes`(`id_solicitud`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Historial de movimientos de stock de materiales';
+
+-- Nueva Tabla para Comunicados Internos (Paso 5.1 del Plan Fase 2)
+CREATE TABLE `comunicados` (
+  `id_comunicado` INT AUTO_INCREMENT PRIMARY KEY, -- Identificador único del comunicado
+  `id_usuario_creador` INT NOT NULL, -- Usuario que creó el comunicado (Dir. Admin o MAE)
+  `titulo_comunicado` VARCHAR(255) NOT NULL, -- Título del comunicado
+  `contenido_comunicado` TEXT NOT NULL, -- Contenido completo del comunicado
+  `fecha_publicacion` DATETIME NOT NULL, -- Fecha y hora en que se publica o se hace visible
+  `fecha_expiracion` DATETIME NULL, -- Fecha y hora opcional hasta cuándo es visible el comunicado
+  `para_roles` TEXT NULL, -- JSON array de id_rol a quienes va dirigido. NULL o vacío significa para todos.
+  `estado` ENUM('publicado', 'borrador', 'archivado') NOT NULL DEFAULT 'borrador', -- Estado del comunicado
+  `fecha_creacion_registro` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `fecha_modificacion_registro` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`id_usuario_creador`) REFERENCES `usuarios`(`id_usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Comunicados internos para el personal';
+
 -- El script está listo para ser ejecutado en un servidor MySQL.

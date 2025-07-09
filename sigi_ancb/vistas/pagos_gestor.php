@@ -318,15 +318,24 @@ mensaje_flash('exito_gestor_pagos');
             <tbody>
                 <?php foreach($pagos_recurrentes as $pr):
                     $alerta_proximidad = '';
+                    $alerta_proximidad = '';
+                    $hoy_dt = new DateTime(); // Comentario: Definir hoy una sola vez fuera del bucle si es posible, o aquí está bien.
+                    $fecha_prox_dt = null;
+
                     if ($pr['estado'] === 'activo' && $pr['fecha_proximo_pago']) {
-                        $fecha_prox = new DateTime($pr['fecha_proximo_pago']);
-                        $hoy = new DateTime();
-                        $intervalo_prox = $hoy->diff($fecha_prox);
-                        if (!$intervalo_prox->invert && $intervalo_prox->days <= 7) { // Comentario: Menos de 7 días o ya pasó.
-                            $alerta_proximidad = 'alerta-proximo'; // Comentario: Rojo si está muy cerca o pasado.
-                            if ($intervalo_prox->days <= 0 && !$intervalo_prox->invert) $alerta_proximidad = 'alerta-vencido';
-                        } elseif (!$intervalo_prox->invert && $intervalo_prox->days <= 15) {
-                             $alerta_proximidad = 'alerta-moderada'; // Comentario: Amarillo si está entre 8 y 15 días.
+                        try { $fecha_prox_dt = new DateTime($pr['fecha_proximo_pago']); } catch(Exception $e) {}
+
+                        if($fecha_prox_dt){
+                            if ($fecha_prox_dt < $hoy_dt) { // Comentario: Vencido (fecha próxima es anterior a hoy).
+                                $alerta_proximidad = 'alerta-vencido';
+                            } else {
+                                $intervalo_prox = $hoy_dt->diff($fecha_prox_dt);
+                                if ($intervalo_prox->days <= 5) { // Comentario: Umbral ajustado a 5 días.
+                                    $alerta_proximidad = 'alerta-proximo'; // Comentario: Amarillo para próximos.
+                                } elseif ($intervalo_prox->days <= 15) { // Comentario: Opcional: otra alerta para un poco más lejanos.
+                                     $alerta_proximidad = 'alerta-moderada';
+                                }
+                            }
                         }
                     }
                 ?>
@@ -397,7 +406,7 @@ mensaje_flash('exito_gestor_pagos');
 
 <style>
 .gestor-pagos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; }
-.card-sigi { background-color: #fdfdfd; padding: 1.5rem; border: 1px solid #eee; border-radius: var(--borde-radio); box-shadow: var(--sombra-caja); }
+.card-sigi { background-color: #fdfdfd; padding: 1.5rem; border: 1px solid #eee; border-radius: var(--borde-radio); box-shadow: var(--sombra_caja); }
 .card-sigi h3 { margin-top: 0; color: var(--color-primario); border-bottom: 1px solid #e0e0e0; padding-bottom: 0.5rem; margin-bottom: 1rem; }
 .form-filtros label, .form-filtros input, .form-filtros select { margin-right: 0.5rem; margin-bottom: 0.5rem; }
 .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875em; }

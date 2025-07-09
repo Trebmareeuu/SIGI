@@ -64,20 +64,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion_aprobacion_sol
             $campo_motivo_rechazo = null;
 
             // Comentario: Obtener tipo de solicitud para mensaje.
-            $stmt_tipo = $pdo->prepare("SELECT tipo_solicitud FROM solicitudes WHERE id_solicitud = :id_sol");
-            $stmt_tipo->bindParam(':id_sol', $id_solicitud_accion, PDO::PARAM_INT);
-            $stmt_tipo->execute();
-            $tipo_sol_db = $stmt_tipo->fetchColumn();
-            $tipo_sol_texto = formatear_tipo_solicitud($tipo_sol_db); // Reusar función de historial_solicitudes
+            $stmt_sol_info = $pdo->prepare("SELECT tipo_solicitud, descripcion_solicitud, observaciones_gestion, id_usuario_solicitante FROM solicitudes WHERE id_solicitud = :id_sol");
+            $stmt_sol_info->bindParam(':id_sol', $id_solicitud_accion, PDO::PARAM_INT);
+            $stmt_sol_info->execute();
+            $solicitud_info = $stmt_sol_info->fetch(PDO::FETCH_ASSOC);
+
+            if (!$solicitud_info) {
+                throw new Exception("Solicitud no encontrada.");
+            }
+
+            $tipo_sol_db = $solicitud_info['tipo_solicitud'];
+            $tipo_sol_texto = function_exists('formatear_tipo_solicitud') ? formatear_tipo_solicitud($tipo_sol_db) : $tipo_sol_db;
 
             if ($accion === 'aprobar_solicitud_admin') {
-                // Comentario: Al aprobar, el estado podría cambiar a 'aprobada' (si ya se entrega) o 'aprobada_pendiente_entrega'.
-                // Comentario: Por simplicidad, 'aprobada' y luego se podría marcar como 'atendida' al entregar.
                 $nuevo_estado = 'aprobada';
                 $mensaje_historial = "Solicitud de $tipo_sol_texto APROBADA por Dir. Admin.";
-                if (!empty($motivo_decision_admin)) { // Comentario: Aquí sería más una observación de aprobación.
+                if (!empty($motivo_decision_admin)) {
                     $mensaje_historial .= " Comentario Dir. Admin: " . $motivo_decision_admin;
                 }
+
+                // Comentario: Lógica específica para SOLICITUD DE MATERIALES al aprobar.
+                if ($tipo_sol_db === 'material_escritorio') {
+                    // Comentario: El JSON con los items solicitados está en 'observaciones_gestion' (según lo guardamos en solicitud_material.php).
+                    $datos_items_json = $solicitud_info['observaciones_gestion'];
+                    $datos_items = json_decode($datos_items_json, true);
+
+                    if (json_last_error() === JSON_ERROR_NONE && isset($datos_items['items_catalogo']) && is_array($datos_items['items_catalogo'])) {
+                        foreach ($datos_items['items_catalogo'] as $id_material_cat => $cantidad_pedida) {
+                            $id_mat_cat_int = filter_var($id_material_cat, FILTER_VALIDATE_INT);
+                            $cant_pedida_int = filter_var($cantidad_pedida, FILTER_VALIDATE_INT);
+
+                            if ($id_mat_cat_int && $cant_pedida_int > 0) {
+                                // Comentario: Verificar stock actual.
+                                $stmt_stock_actual = $pdo->prepare("SELECT stock_actual FROM materiales_escritorio WHERE id_material = :id_material_check");
+                                $stmt_stock_actual->bindParam(':id_material_check', $id_mat_cat_int, PDO::PARAM_INT);
+                                $stmt_stock_actual->execute();
+                                $stock_disp = $stmt_stock_actual->fetchColumn();
+
+                                if ($stock_disp !== false) {
+                                    $cantidad_a_descontar = min($cant_pedida_int, (int)$stock_disp); // Comentario: No descontar más de lo que hay.
+
+                                    if ($cantidad_a_descontar > 0) {
+                                        // Comentario: 1. Disminuir stock en materiales_escritorio.
+                                        $sql_desc_stock = "UPDATE materiales_escritorio SET stock_actual = stock_actual - :cantidad_desc WHERE id_material = :id_mat_desc AND stock_actual >= :cantidad_requerida_para_desc";
+                                        $stmt_desc_stock = $pdo->prepare($sql_desc_stock);
+                                        $stmt_desc_stock->execute([
+                                            ':cantidad_desc' => $cantidad_a_descontar,
+                                            ':id_mat_desc' => $id_mat_cat_int,
+                                            ':cantidad_requerida_para_desc' => $cantidad_a_descontar // Comentario: Evitar stock negativo por concurrencia (aunque la transacción ayuda).
+                                        ]);
+
+                                        if ($stmt_desc_stock->rowCount() > 0) {
+                                            // Comentario: 2. Registrar movimiento de salida.
+                                            $sql_mov_salida = "INSERT INTO movimientos_materiales (id_material, tipo_movimiento, cantidad, id_usuario_registra, id_solicitud_asociada, observaciones)
+                                                               VALUES (:id_m, 'salida_solicitud', :cant, :id_user_reg, :id_sol_asoc, :obs_mov)";
+                                            $stmt_mov_salida = $pdo->prepare($sql_mov_salida);
+                                            $stmt_mov_salida->execute([
+                                                ':id_m' => $id_mat_cat_int,
+                                                ':cant' => $cantidad_a_descontar, // Comentario: La cantidad realmente descontada/entregada.
+                                                ':id_user_reg' => $id_usuario_actual, // Comentario: Quien aprueba/gestiona.
+                                                ':id_sol_asoc' => $id_solicitud_accion,
+                                                ':obs_mov' => "Entrega por solicitud ID $id_solicitud_accion al usuario ID " . $solicitud_info['id_usuario_solicitante']
+                                            ]);
+                                            $mensaje_historial .= "\n - Se descontaron $cantidad_a_descontar unidad(es) del material ID $id_mat_cat_int del stock.";
+                                        } else {
+                                             // Comentario: No se pudo descontar el stock (quizás alguien más lo hizo justo ahora).
+                                             $mensaje_historial .= "\n - No se pudo descontar stock para material ID $id_mat_cat_int (posiblemente stock insuficiente o error).";
+                                             // Comentario: Considerar si esto debe causar un rollback o solo una advertencia.
+                                        }
+                                    }
+                                    if ($cant_pedida_int > $cantidad_a_descontar) {
+                                         $mensaje_historial .= "\n - ATENCIÓN: Para material ID $id_mat_cat_int, se solicitaron $cant_pedida_int pero solo habían $stock_disp en stock. Se entregaron $cantidad_a_descontar.";
+                                         // Comentario: Se podría cambiar el estado de la solicitud a 'aprobada_parcialmente' o similar.
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Comentario: Aquí se podría añadir lógica para los 'otros_materiales' si implica una compra o gestión diferente.
+                }
+                // Fin de lógica específica para materiales.
+
             } elseif ($accion === 'rechazar_solicitud_admin') {
                 if (empty($motivo_decision_admin)) {
                     throw new Exception("El motivo del rechazo es obligatorio.");
@@ -128,17 +195,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion_aprobacion_sol
 }
 
 // Comentario: Reutilizar función de formato de historial_solicitudes.php si es necesario.
+// Comentario: Esta función ya fue movida a funciones.php
+/*
 if (!function_exists('formatear_tipo_solicitud')) {
     function formatear_tipo_solicitud($tipo_bd) {
-        $mapa = [
-            'vacacion' => 'Vacación',
-            'material_escritorio' => 'Material de Escritorio',
-            'activo_mueble_equipo' => 'Activo (Mueble/Equipo)',
-            'otro' => 'Otro Tipo'
-        ];
-        return $mapa[$tipo_bd] ?? ucfirst(str_replace('_', ' ', $tipo_bd));
+        // ...
     }
 }
+*/
 ?>
 <h2>Aprobación de Solicitudes de Materiales y Activos (Dir. Admin.)</h2>
 <p>Revise las siguientes solicitudes y tome la acción correspondiente (aprobar o rechazar).</p>
@@ -176,7 +240,7 @@ mensaje_flash('exito_sol_aprob_admin');
                         <td>
                             <?php
                             $desc_corta = mb_substr(strip_tags($sol['descripcion_solicitud']), 0, 60);
-                            echo htmlspecialchars($desc_corta, ENT_QUOTES, 'UTF-8') . (mb_strlen($sol['descripcion_solicitud']) > 60 ? '...' : '');
+                            echo htmlspecialchars($desc_corta, ENT_QUOTES, 'UTF-8') . (mb_strlen(strip_tags($sol['descripcion_solicitud'])) > 60 ? '...' : '');
                             ?>
                             <button class="boton-tabla ver-detalle-solicitud-admin"
                                     data-id-solicitud="<?php echo $sol['id_solicitud']; ?>"

@@ -29,85 +29,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['importar_csv_biometri
             try {
                 $fila = 1;
                 if (($gestor_csv = fopen($nombre_archivo_temporal, "r")) !== FALSE) {
-                    // Comentario: Opcional: Omitir la primera línea si es cabecera.
-                    // fgetcsv($gestor_csv); $fila++;
+                    // Comentario: Omitir la primera línea si es cabecera (recomendado que el CSV la tenga).
+                    fgetcsv($gestor_csv);
+                    $fila++;
 
+                    // Comentario: Consulta para insertar, intentando enlazar id_empleado_biometrico con personal_fichas.codigo_empleado.
                     $sql_insert = "INSERT INTO asistencia (id_empleado_biometrico, fecha_hora_marcacion, tipo_marcacion, origen_dato, id_usuario_sistema)
-                                   VALUES (:id_bio, :fecha_hora, :tipo, 'importacion_csv', (SELECT id_usuario FROM usuarios WHERE nombre_usuario = :id_bio OR email = :id_bio_email LIMIT 1))
-                                   ON DUPLICATE KEY UPDATE id_asistencia=id_asistencia"; // Comentario: Evita duplicados exactos si hay constraint UNIQUE.
-                                   // Comentario: La subconsulta para id_usuario_sistema es un intento de enlazar. Puede ser NULL si no encuentra.
-                                   // Comentario: Ajustar la condición de enlace (nombre_usuario, email, o un campo específico 'codigo_biometrico' en usuarios).
-                                   // Comentario: 'ON DUPLICATE KEY UPDATE id_asistencia=id_asistencia' es un truco para ignorar la inserción si ya existe una fila idéntica (requiere un índice UNIQUE en las columnas relevantes, ej. id_empleado_biometrico y fecha_hora_marcacion).
-                                   // Comentario: Si no hay índice UNIQUE, se insertarán duplicados. Una mejor aproximación es verificar antes de insertar o manejarlo en la BD.
+                                   VALUES (:id_bio, :fecha_hora, :tipo, 'importacion_csv',
+                                           (SELECT pf.id_usuario FROM personal_fichas pf WHERE pf.codigo_empleado = :id_bio_codigo_empleado LIMIT 1)
+                                          )
+                                   ON DUPLICATE KEY UPDATE id_asistencia=id_asistencia";
+                                   // Comentario: ON DUPLICATE KEY UPDATE requiere un índice UNIQUE en (id_empleado_biometrico, fecha_hora_marcacion) para funcionar como se espera.
+                                   // Comentario: Si no existe ese índice, podría dar error o insertar duplicados si otras columnas difieren.
+                                   // Comentario: Alternativamente, se podría hacer un SELECT previo para verificar duplicidad.
 
                     $stmt_insert = $pdo->prepare($sql_insert);
 
-                    while (($datos_linea = fgetcsv($gestor_csv, 1000, ",")) !== FALSE) { // Comentario: Asume delimitador coma.
-                        if (count($datos_linea) >= 2) { // Comentario: Espera al menos ID_EMPLEADO, FECHA_HORA.
-                            $id_empleado_csv = trim($datos_linea[0]);
-                            $fecha_hora_csv = trim($datos_linea[1]);
-                            // Comentario: El tipo de marcación (entrada/salida) podría venir en una tercera columna o inferirse.
-                            $tipo_marcacion_csv = isset($datos_linea[2]) ? strtolower(trim($datos_linea[2])) : 'desconocido';
-                            if (!in_array($tipo_marcacion_csv, ['entrada', 'salida'])) {
-                                $tipo_marcacion_csv = 'desconocido';
-                            }
+                    // Comentario: Índices de las columnas relevantes según el formato CSV proporcionado.
+                    $col_num_empleado = 2; // 'No.'
+                    $col_fecha_hora = 3;   // 'Fecha/Hora'
+                    $col_marc_ent_sal = 4; // 'Marc-Ent/Sal'
 
-                            // Comentario: Validar y formatear datos.
-                            if (empty($id_empleado_csv) || empty($fecha_hora_csv)) {
+                    while (($datos_linea = fgetcsv($gestor_csv, 1000, ",")) !== FALSE) {
+                        if (count($datos_linea) >= max($col_num_empleado, $col_fecha_hora, $col_marc_ent_sal) + 1) { // Comentario: Verificar que existan las columnas necesarias.
+
+                            $id_empleado_biometrico = trim($datos_linea[$col_num_empleado]);
+                            $fecha_hora_str_csv = trim($datos_linea[$col_fecha_hora]);
+                            $marc_ent_sal_csv = trim($datos_linea[$col_marc_ent_sal]);
+
+                            // Comentario: Validar datos básicos.
+                            if (empty($id_empleado_biometrico) || empty($fecha_hora_str_csv)) {
                                 $lineas_ignoradas++;
-                                $errores_detalle[] = "Línea $fila: ID de empleado o fecha/hora vacíos.";
+                                $errores_detalle[] = "Línea $fila: 'No.' de empleado o 'Fecha/Hora' vacíos.";
                                 $fila++;
                                 continue;
                             }
 
+                            // Comentario: Parsear Fecha/Hora (ej. 07/05/2025 09:59:13 a.m.).
+                            $fecha_hora_bd = null;
                             try {
-                                // Comentario: Intentar convertir la fecha/hora. El formato del CSV es crucial.
-                                // Comentario: Ej: '2024-07-20 08:00:00' o '20/07/2024 08:00'. Adaptar según el CSV.
-                                $obj_fecha_hora = new DateTime($fecha_hora_csv);
-                                $fecha_hora_bd = $obj_fecha_hora->format('Y-m-d H:i:s');
-                            } catch (Exception $e_date) {
+                                // Comentario: DateTime::createFromFormat es más robusto para formatos específicos.
+                                // Comentario: Necesita manejar 'a.m.' y 'p.m.' correctamente.
+                                $formato_fecha_csv = 'd/m/Y h:i:s a';
+                                $obj_fecha_hora_temp = DateTime::createFromFormat($formato_fecha_csv, $fecha_hora_str_csv);
+
+                                if ($obj_fecha_hora_temp === false) {
+                                    // Comentario: Intentar con un formato sin segundos si falla el primero, o si el CSV a veces no los trae.
+                                    $formato_fecha_csv_sin_seg = 'd/m/Y h:i a';
+                                    $obj_fecha_hora_temp = DateTime::createFromFormat($formato_fecha_csv_sin_seg, $fecha_hora_str_csv);
+                                }
+
+                                if ($obj_fecha_hora_temp === false) {
+                                     // Comentario: Intentar un formato más genérico como último recurso, aunque menos preciso para am/pm.
+                                    $obj_fecha_hora_temp = new DateTime($fecha_hora_str_csv);
+                                }
+                                $fecha_hora_bd = $obj_fecha_hora_temp->format('Y-m-d H:i:s');
+                            } catch (Exception $e_date_parse) {
                                 $lineas_ignoradas++;
-                                $errores_detalle[] = "Línea $fila: Formato de fecha/hora no válido ('$fecha_hora_csv'). Error: " . $e_date->getMessage();
+                                $errores_detalle[] = "Línea $fila: Formato de 'Fecha/Hora' no válido ('$fecha_hora_str_csv'). Error: " . $e_date_parse->getMessage();
                                 $fila++;
                                 continue;
+                            }
+
+                            // Comentario: Mapear Marc-Ent/Sal.
+                            $tipo_marcacion_bd = 'desconocido';
+                            if (strtoupper($marc_ent_sal_csv) === 'M/ENT') {
+                                $tipo_marcacion_bd = 'entrada';
+                            } elseif (strtoupper($marc_ent_sal_csv) === 'M/SAL') {
+                                $tipo_marcacion_bd = 'salida';
                             }
 
                             // Comentario: Ejecutar inserción.
-                            // Comentario: Para el enlace id_usuario_sistema, se usa el mismo id_empleado_csv para buscar en nombre_usuario o email.
-                            // Comentario: Esto asume que el ID del biométrico coincide con el nombre_usuario o email.
-                            // Comentario: Si hay un campo dedicado en 'usuarios' para el código biométrico, usar ese.
                             if ($stmt_insert->execute([
-                                ':id_bio' => $id_empleado_csv,
+                                ':id_bio' => $id_empleado_biometrico,
                                 ':fecha_hora' => $fecha_hora_bd,
-                                ':tipo' => $tipo_marcacion_csv,
-                                ':id_bio_email' => $id_empleado_csv // Comentario: Asumiendo que puede ser un email también.
+                                ':tipo' => $tipo_marcacion_bd,
+                                ':id_bio_codigo_empleado' => $id_empleado_biometrico // Comentario: Usar el No. para buscar en personal_fichas.codigo_empleado.
                                 ])) {
                                 if ($stmt_insert->rowCount() > 0) {
                                     $registros_insertados++;
                                 } else {
-                                    // Comentario: Si rowCount es 0 y se usó ON DUPLICATE KEY, podría ser un duplicado ignorado.
-                                    // Comentario: O un fallo silencioso si no hay error PDO.
-                                    // Comentario: Para ser más precisos, se necesitaría verificar si el registro ya existía.
-                                    $lineas_ignoradas++; // Comentario: Asumir duplicado o no inserción.
-                                    $errores_detalle[] = "Línea $fila: Registro para '$id_empleado_csv' a las '$fecha_hora_bd' posiblemente duplicado o no insertado.";
+                                    $lineas_ignoradas++;
+                                    $errores_detalle[] = "Línea $fila: Registro para '$id_empleado_biometrico' a las '$fecha_hora_bd' posiblemente duplicado (o código de empleado no enlazado) y no insertado.";
                                 }
                             } else {
                                 $registros_fallidos++;
                                 $infoError = $stmt_insert->errorInfo();
-                                $errores_detalle[] = "Línea $fila: Error al insertar para '$id_empleado_csv'. SQLSTATE: {$infoError[0]}, Driver Code: {$infoError[1]}, Message: {$infoError[2]}";
+                                $errores_detalle[] = "Línea $fila: Error SQL al insertar para '$id_empleado_biometrico'. SQLSTATE: {$infoError[0]}, Driver Code: {$infoError[1]}, Message: {$infoError[2]}";
                             }
 
                         } else {
                             $lineas_ignoradas++;
-                            $errores_detalle[] = "Línea $fila: Número de columnas incorrecto.";
+                            $errores_detalle[] = "Línea $fila: Número de columnas insuficiente para procesar.";
                         }
                         $fila++;
                     }
                     fclose($gestor_csv);
                     $pdo->commit();
-                    mensaje_flash('exito_biometrico_import', "Importación completada. Registros insertados: $registros_insertados. Fallidos: $registros_fallidos. Líneas ignoradas/duplicadas: $lineas_ignoradas.", 'alert-success');
-                    if (!empty($errores_detalle) && $registros_fallidos > 0) {
-                         mensaje_flash('info_biometrico_import_errores', "Algunos registros no pudieron ser importados. Revise los detalles.", 'alert-info');
+                    mensaje_flash('exito_biometrico_import', "Importación completada. Registros nuevos insertados: $registros_insertados. Registros fallidos: $registros_fallidos. Líneas ignoradas/duplicadas/no enlazadas: $lineas_ignoradas.", 'alert-success');
+                    if (!empty($errores_detalle) && ($registros_fallidos > 0 || $lineas_ignoradas > $registros_insertados)) { // Comentario: Mostrar si hay fallos o muchas ignoradas.
+                         mensaje_flash('info_biometrico_import_errores', "Algunos registros tuvieron problemas. Revise los detalles si se muestran.", 'alert-info');
                     }
 
                 } else {
@@ -140,19 +161,23 @@ mensaje_flash('info_biometrico_import_errores');
 
 <div class="card-sigi">
     <h3>Instrucciones para el archivo CSV:</h3>
+    <p>Asegúrese de que su archivo CSV cumpla con el siguiente formato y orden de columnas:</p>
+    <ol>
+        <li><strong>Dpto.:</strong> Departamento (se ignorará en la importación actual).</li>
+        <li><strong>Nombre:</strong> Nombre completo del empleado (se ignorará, se usará el 'No.' para identificación).</li>
+        <li><strong>No.:</strong> Número o ID del empleado en el biométrico. <strong>Este valor se usará como <code>id_empleado_biometrico</code>.</strong></li>
+        <li><strong>Fecha/Hora:</strong> Fecha y hora de la marcación. Formato esperado: <code>DD/MM/YYYY HH:MM:SS a.m./p.m.</code> (ej: <code>07/05/2025 09:59:13 a.m.</code>).</li>
+        <li><strong>Marc-Ent/Sal:</strong> Tipo de marcación. Se espera <code>M/Ent</code> para entrada y <code>M/Sal</code> para salida.</li>
+        <li><strong>Locación ID:</strong> (Se ignorará).</li>
+        <li><strong>ID Numero:</strong> (Se ignorará).</li>
+        <li><strong>VerificaCod:</strong> (Se ignorará).</li>
+        <li><strong>TarjetaNo:</strong> (Se ignorará).</li>
+    </ol>
     <ul>
         <li>El archivo debe estar en formato CSV (valores separados por comas).</li>
         <li>La codificación de caracteres recomendada es UTF-8.</li>
-        <li>Cada línea debe representar una marcación de asistencia.</li>
-        <li>Columnas esperadas (en orden):
-            <ol>
-                <li><strong>ID_EMPLEADO:</strong> Identificador del empleado tal como figura en el dispositivo biométrico. El sistema intentará enlazar este ID con el campo 'nombre_usuario' o 'email' de la tabla de usuarios del sistema.</li>
-                <li><strong>FECHA_HORA:</strong> Fecha y hora de la marcación. Formatos comunes aceptados: <code>YYYY-MM-DD HH:MM:SS</code> o <code>DD/MM/YYYY HH:MM</code>. Asegúrese de que el formato sea consistente en todo el archivo.</li>
-                <li><strong>TIPO_MARCACION (Opcional):</strong> Puede ser 'entrada' o 'salida'. Si no se provee o es diferente, se registrará como 'desconocido'.</li>
-            </ol>
-        </li>
-        <li>Se recomienda no incluir una fila de cabecera, o si la incluye, el sistema podría intentar procesarla (causando una línea ignorada/fallida).</li>
-        <li>El sistema intentará evitar la inserción de registros exactamente duplicados (mismo ID de empleado y misma fecha/hora de marcación) si la base de datos tiene las restricciones adecuadas.</li>
+        <li>Se recomienda que el archivo CSV **incluya la fila de cabeceras** como se describe arriba, ya que el sistema la omitirá automáticamente. Si no la incluye, la primera línea de datos podría perderse.</li>
+        <li>El sistema intentará enlazar el <code>No.</code> del empleado con el campo <code>codigo_empleado</code> en las fichas de personal para asociar la asistencia al usuario correcto del sistema.</li>
     </ul>
 
     <form action="index.php?vista=biometrico_importar" method="POST" enctype="multipart/form-data" class="mt-3">

@@ -162,6 +162,16 @@ img {
     background-color: var(--color-primario); /* Comentario: Fondo azul. */
     color: var(--color-blanco); /* Comentario: Texto blanco. */
 }
+.badge-notificacion {
+    background-color: var(--color-error); /* Comentario: Rojo para destacar. */
+    color: var(--color-blanco);
+    padding: 0.1em 0.4em;
+    font-size: 0.75em;
+    border-radius: 0.75rem; /* Comentario: Para hacerlo más circular. */
+    position: relative; /* Comentario: Ajustar posición si es necesario. */
+    top: -0.5em;
+    margin-left: 0.3em;
+}
 
 /* Estilos para Menús Desplegables (Dropdown) */
 .navegacion-principal ul li.dropdown > ul.dropdown-menu {
