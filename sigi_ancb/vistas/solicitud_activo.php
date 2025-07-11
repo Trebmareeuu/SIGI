@@ -1,52 +1,71 @@
 <?php
-// Archivo: vistas/solicitud_activo.php (VERSIÓN CORREGIDA - SOLO PRESENTACIÓN)
-// Propósito: Formulario para que los usuarios soliciten muebles o equipos (activos) - Parte Visual HTML.
+// Archivo: vistas/solicitud_activo.php
+// Propósito: Página informativa sobre el proceso manual de solicitud de activos y descarga de formato.
 // Comentario en español explicando el propósito de este archivo.
 
-// Comentario: Las variables $tipo_activo_solicitado, $descripcion_activo, $justificacion_activo,
-// Comentario: $tipos_activo_disponibles_form son definidas en logica/solicitud_activo_logica.php
+$id_usuario_actual = obtener_id_usuario_actual();
+if (!tiene_permiso('DESCARGAR_FORMULARIOS', $id_usuario_actual) && !$id_usuario_actual) {
+     if(verificar_sesion()){
+        mensaje_flash('error_sol_act_info', 'No tiene permisos para acceder a esta sección.', 'alert-danger');
+        redirigir('index.php?vista=dashboard');
+    }
+}
 ?>
-<h2>Solicitud de Activos (Muebles/Equipos)</h2>
+<h2>Proceso de Solicitud de Activos (Muebles/Equipos)</h2>
 
 <?php
-mensaje_flash('error_sol_act');
-mensaje_flash('error_sol_act_form');
-mensaje_flash('exito_sol_act');
+mensaje_flash('error_sol_act_info');
 ?>
 
-<p>Por favor, complete el formulario para solicitar muebles, equipos u otros activos para su trabajo.</p>
+<div class="card-sigi">
+    <h3>Información Importante sobre Solicitudes de Activos</h3>
+    <p>Estimado/a funcionario/a, el proceso para solicitar activos (muebles, equipos, etc.) es el siguiente:</p>
+    <ol>
+        <li>Descargue el "Formulario de Solicitud de Activos" haciendo clic en uno de los enlaces de abajo.</li>
+        <li>Complete todos los campos del formulario, detallando las especificaciones del activo requerido y la justificación exhaustiva de su necesidad.</li>
+        <li>Firme su solicitud y obtenga el Visto Bueno (V°B°) de su Jefe Inmediato Superior en el formulario físico.</li>
+        <li>Presente el formulario físico debidamente llenado y firmado al Encargado de Activos Fijos de la institución.</li>
+        <li>El Encargado de Activos Fijos registrará su solicitud en el sistema SIGI ANCB y la derivará al Director Administrativo para su análisis, consideración presupuestaria y aprobación.</li>
+        <li>Podrá consultar el estado de su solicitud a través de la opción "Mis Solicitudes (Estado)" o "Mis Vacaciones y Materiales" en este sistema.</li>
+    </ol>
 
-<form action="index.php?vista=solicitud_activo" method="POST" class="validar-js">
-    <div class="grupo-formulario">
-        <label for="tipo_activo">Tipo de Activo Solicitado:</label>
-        <select id="tipo_activo" name="tipo_activo" required>
-            <option value="">-- Seleccione un tipo --</option>
-            <?php foreach ($tipos_activo_disponibles_form as $clave_tipo => $desc_tipo): ?>
-            <option value="<?php echo htmlspecialchars($clave_tipo, ENT_QUOTES, 'UTF-8'); ?>" <?php echo ($tipo_activo_solicitado === $clave_tipo) ? 'selected' : ''; ?>>
-                <?php echo htmlspecialchars($desc_tipo, ENT_QUOTES, 'UTF-8'); ?>
-            </option>
-            <?php endforeach; ?>
-        </select>
-    </div>
+    <hr>
 
-    <div class="grupo-formulario">
-        <label for="descripcion_activo">Descripción Detallada del Activo:</label>
-        <textarea id="descripcion_activo" name="descripcion_activo" rows="5" required placeholder="Ej: Silla ergonómica con soporte lumbar, Laptop Core i7 con 16GB RAM, Licencia de Microsoft Office..."><?php echo htmlspecialchars($descripcion_activo, ENT_QUOTES, 'UTF-8'); ?></textarea>
-        <small>Sea lo más específico posible (marca, modelo, características técnicas, etc.).</small>
-    </div>
+    <h4>Descarga de Formulario</h4>
+    <p>
+        <a href="<?php echo BASE_URL; ?>docs/formularios_descarga/formato_solicitud_activo.pdf" target="_blank" class="boton boton-primario">
+            <span class="icono-pdf">📄</span> Descargar Formulario de Sol. de Activo (PDF)
+        </a>
+        <br>
+        <small>(Si no tiene un lector de PDF, puede descargarlo <a href="https://get.adobe.com/reader/" target="_blank" rel="noopener noreferrer">aquí</a>)</small>
+    </p>
+    <p>
+         <a href="<?php echo BASE_URL; ?>docs/formularios_descarga/formato_solicitud_activo.docx" target="_blank" class="boton boton-secundario">
+            <span class="icono-doc">📝</span> Descargar Formulario de Sol. de Activo (Word)
+        </a>
+    </p>
 
-    <div class="grupo-formulario">
-        <label for="justificacion_activo">Justificación de la Solicitud:</label>
-        <textarea id="justificacion_activo" name="justificacion_activo" rows="4" required><?php echo htmlspecialchars($justificacion_activo, ENT_QUOTES, 'UTF-8'); ?></textarea>
-        <small>Explique por qué necesita este activo y cómo contribuirá a sus funciones.</small>
-    </div>
+    <p class="mt-3">
+        Para cualquier consulta sobre el proceso o especificaciones técnicas, por favor, contacte al Encargado de Activos Fijos.
+    </p>
+</div>
 
-    <div class="grupo-formulario acciones-formulario">
-        <button type="submit" name="enviar_solicitud_activo" class="boton boton-primario">Enviar Solicitud</button>
-        <a href="index.php?vista=dashboard" class="boton boton-secundario">Cancelar</a>
-    </div>
-</form>
+<div class="acciones-formulario mt-3">
+     <a href="index.php?vista=dashboard" class="boton boton-info">Volver al Dashboard</a>
+     <?php if($id_usuario_actual && tiene_permiso('VER_HISTORIAL_SOLICITUDES_PROPIAS', $id_usuario_actual)): ?>
+         <a href="index.php?vista=solicitudes_historial" class="boton boton-secundario">Ver Estado de Mis Solicitudes</a>
+     <?php endif; ?>
+</div>
+
+<style>
+    .card-sigi ol { padding-left: 20px; margin-bottom: 1rem;}
+    .card-sigi ol li { margin-bottom: 0.5rem; }
+    .icono-pdf::before, .icono-doc::before {
+        font-family: "Arial", sans-serif;
+        margin-right: 5px;
+    }
+</style>
 
 <?php
-// Comentario: Fin del archivo vistas/solicitud_activo.php (SOLO PRESENTACIÓN)
+// Comentario: Fin del archivo vistas/solicitud_activo.php (Modificado para proceso manual)
 ?>

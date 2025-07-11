@@ -37,6 +37,15 @@ try {
             AND s.estado_solicitud = 'pendiente_aprobacion_admin'
             ORDER BY s.fecha_solicitud ASC
             LIMIT :limit OFFSET :offset";
+    // Comentario: Obtener también la ruta del adjunto para mostrarla.
+    $sql = "SELECT s.id_solicitud, s.fecha_solicitud, s.tipo_solicitud, s.descripcion_solicitud, s.ruta_adjunto_solicitud,
+                   u.nombres as solicitante_nombres, u.apellidos as solicitante_apellidos, u.cargo as solicitante_cargo
+            FROM solicitudes s
+            JOIN usuarios u ON s.id_usuario_solicitante = u.id_usuario
+            WHERE s.tipo_solicitud IN ('material_escritorio', 'activo_mueble_equipo')
+            AND s.estado_solicitud = 'pendiente_aprobacion_admin'
+            ORDER BY s.fecha_solicitud ASC
+            LIMIT :limit OFFSET :offset";
     $stmt = $pdo->prepare($sql);
     $stmt->bindParam(':limit', $regs_por_pagina, PDO::PARAM_INT);
     $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
@@ -226,6 +235,7 @@ mensaje_flash('exito_sol_aprob_admin');
                     <th>Cargo Sol.</th>
                     <th>Tipo Solicitud</th>
                     <th>Descripción (Extracto)</th>
+                    <th>Adjunto</th>
                     <th>Acciones Dir. Admin.</th>
                 </tr>
             </thead>
@@ -245,7 +255,15 @@ mensaje_flash('exito_sol_aprob_admin');
                             <button class="boton-tabla ver-detalle-solicitud-admin"
                                     data-id-solicitud="<?php echo $sol['id_solicitud']; ?>"
                                     data-descripcion="<?php echo htmlspecialchars(nl2br(strip_tags($sol['descripcion_solicitud'])), ENT_QUOTES, 'UTF-8'); ?>"
-                                    title="Ver Descripción Completa">👁️</button>
+                                    data-adjunto="<?php echo !empty($sol['ruta_adjunto_solicitud']) ? BASE_URL . 'docs/' . htmlspecialchars($sol['ruta_adjunto_solicitud'], ENT_QUOTES, 'UTF-8') : ''; ?>"
+                                    title="Ver Descripción Completa y Adjunto">👁️</button>
+                        </td>
+                        <td>
+                            <?php if (!empty($sol['ruta_adjunto_solicitud'])): ?>
+                                <a href="<?php echo BASE_URL . 'docs/' . htmlspecialchars($sol['ruta_adjunto_solicitud'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" class="boton-tabla btn-sm" title="Ver Formulario Escaneado">Ver PDF</a>
+                            <?php else: ?>
+                                N/A
+                            <?php endif; ?>
                         </td>
                         <td>
                             <form action="index.php?vista=solicitudes_aprobacion_admin&pagina=<?php echo $pagina_actual; ?>" method="POST" class="form-accion-bandeja">
@@ -289,8 +307,10 @@ mensaje_flash('exito_sol_aprob_admin');
 <div id="modalDetalleSolicitudAdmin" class="modal-sigi oculto">
     <div class="modal-contenido-sigi">
         <span class="modal-cerrar-sigi" onclick="document.getElementById('modalDetalleSolicitudAdmin').classList.add('oculto');">&times;</span>
-        <h4>Descripción Completa de Solicitud (ID: <span id="modalIdSolicitudFullAdmin"></span>)</h4>
+        <h4>Detalle de Solicitud (ID: <span id="modalIdSolicitudFullAdmin"></span>)</h4>
+        <p><strong>Descripción/Referencia:</strong></p>
         <div id="modalDescripcionCompletaFullAdmin" class="modal-texto-scroll"></div>
+        <p class="mt-2"><strong>Formulario Adjunto:</strong> <a id="modalEnlaceAdjuntoAdmin" href="#" target="_blank">Ver/Descargar PDF Adjunto</a><span id="modalNoAdjuntoAdmin" class="oculto">No hay adjunto.</span></p>
     </div>
 </div>
 
@@ -310,11 +330,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalAdmin = document.getElementById('modalDetalleSolicitudAdmin');
     const modalIdAdmin = document.getElementById('modalIdSolicitudFullAdmin');
     const modalDescAdmin = document.getElementById('modalDescripcionCompletaFullAdmin');
+    const modalEnlaceAdjunto = document.getElementById('modalEnlaceAdjuntoAdmin');
+    const modalNoAdjunto = document.getElementById('modalNoAdjuntoAdmin');
 
     document.querySelectorAll('.ver-detalle-solicitud-admin').forEach(boton => {
         boton.addEventListener('click', function() {
             if(modalIdAdmin) modalIdAdmin.textContent = this.dataset.idSolicitud;
             if(modalDescAdmin) modalDescAdmin.innerHTML = this.dataset.descripcion;
+
+            if (this.dataset.adjunto && modalEnlaceAdjunto && modalNoAdjunto) {
+                modalEnlaceAdjunto.href = this.dataset.adjunto;
+                modalEnlaceAdjunto.classList.remove('oculto');
+                modalNoAdjunto.classList.add('oculto');
+            } else if (modalEnlaceAdjunto && modalNoAdjunto) {
+                modalEnlaceAdjunto.classList.add('oculto');
+                modalNoAdjunto.classList.remove('oculto');
+            }
+
             if(modalAdmin) modalAdmin.classList.remove('oculto');
         });
     });

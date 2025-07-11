@@ -1,134 +1,109 @@
 <?php
-// Archivo: vistas/solicitud_vacacion.php (VERSIÓN CORREGIDA - SOLO PRESENTACIÓN)
-// Propósito: Formulario para que los usuarios soliciten vacaciones - Parte Visual HTML.
+// Archivo: vistas/solicitud_vacacion.php
+// Propósito: Página informativa sobre el proceso manual de solicitud de vacaciones y descarga de formato.
 // Comentario en español explicando el propósito de este archivo.
 
-// Comentario: Las variables $fecha_inicio, $fecha_fin, $dias_solicitados, $descripcion_solicitud,
-// Comentario: $dias_disponibles_vacacion_display son definidas en logica/solicitud_vacacion_logica.php
+// Comentario: Ya no se necesita la lógica de creación de solicitud aquí.
+// Comentario: El permiso 'SOLICITAR_VACACION' se quitará de los roles de funcionario estándar.
+// Comentario: Se podría mantener un permiso 'VER_INFO_VACACION' si esta página debe ser restringida.
+// Comentario: Por ahora, se asume que si el usuario llega aquí (ej. desde un menú antiguo o enlace directo),
+// Comentario: se le muestra la información del proceso manual.
+
+global $pdo; // Comentario: $pdo podría ser necesario si se quiere mostrar saldo aquí.
+$id_usuario_actual = obtener_id_usuario_actual();
+$dias_disponibles_vacacion_display = "N/A"; // Comentario: Inicializar.
+
+if ($id_usuario_actual) { // Comentario: Solo calcular si hay usuario logueado.
+    try {
+        $dias_asignados_anual = 20; // Comentario: Default.
+        $stmt_ficha = $pdo->prepare("SELECT dias_vacacion_anuales_asignados FROM personal_fichas WHERE id_usuario = :id_user_ficha");
+        $stmt_ficha->bindParam(':id_user_ficha', $id_usuario_actual, PDO::PARAM_INT);
+        $stmt_ficha->execute();
+        $dias_asignados_raw = $stmt_ficha->fetchColumn();
+        if ($dias_asignados_raw !== false && !is_null($dias_asignados_raw)) {
+            $dias_asignados_anual = (int)$dias_asignados_raw;
+        }
+
+        $anio_actual_calculo = date('Y');
+        $sql_tomados = "SELECT SUM(dias_solicitados_vacacion) as total_tomados
+                        FROM solicitudes
+                        WHERE id_usuario_solicitante = :id_user_tomados
+                        AND tipo_solicitud = 'vacacion'
+                        AND estado_solicitud = 'aprobada'
+                        AND YEAR(fecha_inicio_vacacion) = :anio_calc";
+        $stmt_tomados = $pdo->prepare($sql_tomados);
+        // Comentario: La variable $anio_actual_para_calculo no estaba definida aquí, usando $anio_actual_calculo.
+        $stmt_tomados->execute([':id_user_tomados' => $id_usuario_actual, ':anio_calc' => $anio_actual_calculo]);
+        $total_dias_tomados_este_anio = (int)$stmt_tomados->fetchColumn();
+        $dias_disponibles_vacacion_display = $dias_asignados_anual - $total_dias_tomados_este_anio;
+    } catch (PDOException $e) {
+        error_log("Error al calcular días de vacación para info: " . $e->getMessage());
+        $dias_disponibles_vacacion_display = "Error al calcular";
+    }
+}
 ?>
-<h2>Solicitud de Vacación</h2>
+<h2>Proceso de Solicitud de Vacaciones</h2>
 
 <?php
 mensaje_flash('error_sol_vac');
-mensaje_flash('error_sol_vac_form');
 mensaje_flash('exito_sol_vac');
 ?>
 
-<p>Por favor, complete el siguiente formulario para solicitar sus vacaciones.</p>
-<p>Días de vacación disponibles (referencial): <strong><?php echo $dias_disponibles_vacacion_display; ?></strong>.</p>
-<!-- Comentario: Este conteo de días disponibles es solo un ejemplo, la lógica real sería más compleja. -->
+<div class="card-sigi">
+    <h3>Información Importante sobre Solicitudes de Vacación</h3>
+    <p>Estimado/a funcionario/a, el proceso para solicitar vacaciones se realiza de la siguiente manera:</p>
+    <ol>
+        <li>Descargue el formato oficial de "Solicitud de Vacación" haciendo clic en el enlace de abajo.</li>
+        <li>Complete todos los campos del formulario de manera clara y precisa.</li>
+        <li>Firme su solicitud.</li>
+        <li>Presente la carta de solicitud física en la oficina de Secretaría de Dirección.</li>
+        <li>Secretaría de Dirección gestionará la aprobación con la Dirección Ejecutiva (MAE).</li>
+        <li>Una vez que su solicitud sea aprobada y procesada internamente, podrá consultar el estado y sus días de vacación restantes a través de la opción "Mis Datos RRHH / Vacaciones" en este sistema.</li>
+    </ol>
 
-<form action="index.php?vista=solicitud_vacacion" method="POST" class="validar-js">
-    <div class="grupo-formulario">
-        <label for="fecha_inicio">Fecha de Inicio de Vacaciones:</label>
-        <input type="date" id="fecha_inicio" name="fecha_inicio" value="<?php echo htmlspecialchars($fecha_inicio, ENT_QUOTES, 'UTF-8'); ?>" required
-               min="<?php echo date('Y-m-d', strtotime('+2 day')); // Comentario: Mínimo 2 días en el futuro. ?>">
-    </div>
+    <p><strong>Sus días de vacación disponibles para el año <?php echo date('Y'); ?> (referencial):
+       <strong><?php echo htmlspecialchars($dias_disponibles_vacacion_display, ENT_QUOTES, 'UTF-8'); ?></strong> días.</strong>
+    </p>
+    <p>Este saldo es informativo y se actualizará una vez que sus solicitudes aprobadas sean registradas en el sistema por Secretaría.</p>
 
-    <div class="grupo-formulario">
-        <label for="fecha_fin">Fecha de Fin de Vacaciones:</label>
-        <input type="date" id="fecha_fin" name="fecha_fin" value="<?php echo htmlspecialchars($fecha_fin, ENT_QUOTES, 'UTF-8'); ?>" required>
-    </div>
+    <hr>
 
-    <div class="grupo-formulario">
-        <label for="dias_solicitados">Número de Días Solicitados:</label>
-        <input type="number" id="dias_solicitados" name="dias_solicitados" value="<?php echo htmlspecialchars($dias_solicitados, ENT_QUOTES, 'UTF-8'); ?>" required min="1" max="90">
-        <small>Ingrese el número total de días calendario de vacación que desea tomar.</small>
-    </div>
+    <h4>Descarga de Formulario</h4>
+    <p>
+        <a href="<?php echo BASE_URL; ?>docs/formularios_descarga/formato_solicitud_vacacion.pdf" target="_blank" class="boton boton-primario">
+            <span class="icono-pdf">📄</span> Descargar Formato de Solicitud de Vacación (PDF)
+        </a>
+        <br>
+        <small>(Si no tiene un lector de PDF, puede descargarlo <a href="https://get.adobe.com/reader/" target="_blank" rel="noopener noreferrer">aquí</a>)</small>
+    </p>
+    <p>
+         <a href="<?php echo BASE_URL; ?>docs/formularios_descarga/formato_solicitud_vacacion.docx" target="_blank" class="boton boton-secundario">
+            <span class="icono-doc">📝</span> Descargar Formato de Solicitud de Vacación (Word)
+        </a>
+    </p>
 
-    <div class="grupo-formulario">
-        <label for="descripcion_solicitud">Justificación / Motivo de la Solicitud:</label>
-        <textarea id="descripcion_solicitud" name="descripcion_solicitud" rows="4" required><?php echo htmlspecialchars($descripcion_solicitud, ENT_QUOTES, 'UTF-8'); ?></textarea>
-    </div>
+    <p class="mt-3">
+        Si tiene alguna duda sobre el proceso, por favor, consulte con Secretaría de Dirección o la Unidad de Recursos Humanos.
+    </p>
+</div>
 
-    <div class="grupo-formulario acciones-formulario">
-        <button type="submit" name="enviar_solicitud_vacacion" class="boton boton-primario">Enviar Solicitud</button>
-        <a href="index.php?vista=dashboard" class="boton boton-secundario">Cancelar</a>
-    </div>
-</form>
+<div class="acciones-formulario mt-3">
+     <a href="index.php?vista=dashboard" class="boton boton-info">Volver al Dashboard</a>
+     <?php if(tiene_permiso('VER_MIS_VACACIONES', $id_usuario_actual)): // Asumiendo que este permiso lleva a la nueva vista de consulta ?>
+         <a href="index.php?vista=mis_datos_rrhh" class="boton boton-secundario">Consultar Mis Vacaciones</a>
+     <?php endif; ?>
+</div>
 
-<script>
-// Comentario: Script para calcular días o validar fechas en cliente (opcional, ya que el backend valida).
-document.addEventListener('DOMContentLoaded', function() {
-    const fechaInicioInput = document.getElementById('fecha_inicio');
-    const fechaFinInput = document.getElementById('fecha_fin');
-    const diasSolicitadosInput = document.getElementById('dias_solicitados');
-
-    function actualizarMinFechaFin() {
-        if (fechaInicioInput.value) {
-            fechaFinInput.min = fechaInicioInput.value;
-             // Comentario: Si fecha_fin es menor que la nueva fecha_inicio, limpiarla o ajustarla.
-            if (fechaFinInput.value && fechaFinInput.value < fechaInicioInput.value) {
-                fechaFinInput.value = fechaInicioInput.value;
-            }
-        }
+<style>
+    .card-sigi ol { padding-left: 20px; margin-bottom: 1rem;}
+    .card-sigi ol li { margin-bottom: 0.5rem; }
+    .icono-pdf::before, .icono-doc::before {
+        /* Comentario: Se podrían usar iconos reales aquí con font awesome o svgs */
+        font-family: "Arial", sans-serif;
+        margin-right: 5px;
     }
-
-    function calcularDiasSolicitados() {
-        if (fechaInicioInput.value && fechaFinInput.value) {
-            try {
-                const inicio = new Date(fechaInicioInput.value + 'T00:00:00'); // Comentario: Asegurar que se tome el inicio del día.
-                const fin = new Date(fechaFinInput.value + 'T00:00:00');
-
-                if (fin >= inicio) {
-                    const diffTiempo = fin.getTime() - inicio.getTime();
-                    const diffDias = Math.ceil(diffTiempo / (1000 * 60 * 60 * 24)) + 1;
-                    if (diasSolicitadosInput) { // Comentario: Actualizar el campo si se desea.
-                       // diasSolicitadosInput.value = diffDias;
-                    }
-                } else {
-                    // if (diasSolicitadosInput) diasSolicitadosInput.value = '';
-                }
-            } catch(e) {
-                // console.error("Error parseando fechas: ", e);
-                // if (diasSolicitadosInput) diasSolicitadosInput.value = '';
-            }
-        }
-    }
-
-    if (fechaInicioInput) {
-        fechaInicioInput.addEventListener('change', function() {
-            actualizarMinFechaFin();
-            calcularDiasSolicitados();
-        });
-        // Comentario: Ejecutar al cargar por si hay valores POST.
-        actualizarMinFechaFin();
-    }
-    if (fechaFinInput) {
-        fechaFinInput.addEventListener('change', calcularDiasSolicitados);
-    }
-
-    // Comentario: Validación en cliente al enviar (adicional a la del servidor).
-    const form = document.querySelector('form.validar-js[action="index.php?vista=solicitud_vacacion"]'); // Comentario: Ser más específico.
-    if (form && fechaInicioInput && fechaFinInput && diasSolicitadosInput) {
-        form.addEventListener('submit', function(event){
-            let erroresCliente = [];
-            if (!fechaInicioInput.value) erroresCliente.push("Fecha de inicio es requerida.");
-            if (!fechaFinInput.value) erroresCliente.push("Fecha de fin es requerida.");
-            if (!diasSolicitadosInput.value || parseInt(diasSolicitadosInput.value) < 1) erroresCliente.push("Días solicitados debe ser al menos 1.");
-
-            if (fechaInicioInput.value && fechaFinInput.value) {
-                try {
-                    const inicio = new Date(fechaInicioInput.value);
-                    const fin = new Date(fechaFinInput.value);
-                    if (fin < inicio) {
-                        erroresCliente.push("La fecha de fin no puede ser anterior a la fecha de inicio.");
-                    }
-                     // Comentario: Podría haber una validación más estricta entre días y rango de fechas si se desea.
-                } catch (e) {
-                    erroresCliente.push("Formato de fecha inválido.");
-                }
-            }
-
-            if (erroresCliente.length > 0) {
-                alert("Por favor corrija los siguientes errores:\n- " + erroresCliente.join("\n- "));
-                event.preventDefault();
-            }
-        });
-    }
-});
-</script>
+</style>
 
 <?php
-// Comentario: Fin del archivo vistas/solicitud_vacacion.php (SOLO PRESENTACIÓN)
+// Comentario: Fin del archivo vistas/solicitud_vacacion.php (Modificado para proceso manual)
 ?>

@@ -116,49 +116,76 @@ if (verificar_sesion() && $id_usuario_actual && isset($_SESSION['id_rol'])) {
             <!-- Ya está en info-usuario-header, pero podría estar aquí también si se prefiere -->
             <!-- <li><a href="<?php echo BASE_URL; ?>index.php?vista=perfil" class="<?php echo ($vista_actual == 'perfil') ? 'activo' : ''; ?>">Mi Perfil</a></li> -->
 
-            <!-- Comentario: Módulo de Correspondencia (accesos varían según permisos). -->
-            <?php if (tiene_permiso('VER_CORRESPONDENCIA_PROPIA') || tiene_permiso('REDACTAR_CORRESPONDENCIA_INTERNA') || tiene_permiso('REGISTRAR_CORRESPONDENCIA_EXTERNA')): ?>
-                <li class="dropdown"> <!-- Comentario: Elemento de menú desplegable. -->
-                    <a href="#" class="<?php echo (strpos($vista_actual, 'correspondencia_') === 0 || $vista_actual == 'documento_detalle') ? 'activo' : ''; ?>">Correspondencia</a>
-                    <ul class="dropdown-menu"> <!-- Comentario: Submenú. -->
+            <!-- Comentario: Módulo de Correspondencia y Registros de Secretaría -->
+            <?php
+            $menu_secretaria_visible = tiene_permiso('VER_CORRESPONDENCIA_PROPIA') ||
+                                     tiene_permiso('REDACTAR_CORRESPONDENCIA_INTERNA') ||
+                                     tiene_permiso('REGISTRAR_CORRESPONDENCIA_EXTERNA') ||
+                                     tiene_permiso('REGISTRAR_VACACION_APROBADA'); // Nuevo permiso para Secretaría
+
+            if ($menu_secretaria_visible):
+            ?>
+                <li class="dropdown">
+                    <a href="#" class="<?php echo (strpos($vista_actual, 'correspondencia_') === 0 || $vista_actual == 'documento_detalle' || $vista_actual == 'secretaria_registro_vacaciones') ? 'activo' : ''; ?>">Gestión Secretaría</a>
+                    <ul class="dropdown-menu">
                         <?php if (tiene_permiso('VER_CORRESPONDENCIA_PROPIA')): ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=correspondencia_bandeja" class="<?php echo ($vista_actual == 'correspondencia_bandeja') ? 'activo-sub' : ''; ?>">Bandeja</a></li>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=correspondencia_bandeja" class="<?php echo ($vista_actual == 'correspondencia_bandeja') ? 'activo-sub' : ''; ?>">Bandeja Corresp.</a></li>
                         <?php endif; ?>
                         <?php if (tiene_permiso('REDACTAR_CORRESPONDENCIA_INTERNA')): ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=correspondencia_redactar" class="<?php echo ($vista_actual == 'correspondencia_redactar') ? 'activo-sub' : ''; ?>">Redactar Interna</a></li>
                         <?php endif; ?>
-                        <?php if (tiene_permiso('REGISTRAR_CORRESPONDENCIA_EXTERNA')): // Secretaria ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=correspondencia_registrar" class="<?php echo ($vista_actual == 'correspondencia_registrar') ? 'activo-sub' : ''; ?>">Registrar Externa</a></li>
+                        <?php if (tiene_permiso('REGISTRAR_CORRESPONDENCIA_EXTERNA')): ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=correspondencia_registrar" class="<?php echo ($vista_actual == 'correspondencia_registrar') ? 'activo-sub' : ''; ?>">Registrar Corresp. Externa</a></li>
+                        <?php endif; ?>
+                        <?php if (tiene_permiso('REGISTRAR_VACACION_APROBADA')): ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=secretaria_registro_vacaciones" class="<?php echo ($vista_actual == 'secretaria_registro_vacaciones') ? 'activo-sub' : ''; ?>">Registrar Vacación Aprobada</a></li>
                         <?php endif; ?>
                     </ul>
                 </li>
             <?php endif; ?>
 
-            <!-- Comentario: Módulo de Solicitudes (accesos varían según permisos). -->
-            <?php if (tiene_permiso('SOLICITAR_VACACION') || tiene_permiso('SOLICITAR_MATERIAL') || tiene_permiso('SOLICITAR_ACTIVO') || tiene_permiso('VER_HISTORIAL_SOLICITUDES_PROPIAS') || tiene_permiso('CONTROLAR_SOLICITUDES_VACACION_SECRETARIA') || tiene_permiso('APROBAR_VACACIONES_MAE') || tiene_permiso('APROBAR_SOLICITUDES_ADMIN')): ?>
+            <!-- Comentario: Módulo de Solicitudes y Consultas de RRHH para Funcionarios -->
+            <?php
+            // Comentario: Unir permisos para el menú desplegable de "Mis Trámites/Consultas"
+            $puede_ver_menu_tramites_funcionario = tiene_permiso('DESCARGAR_FORMULARIOS') ||
+                                                 tiene_permiso('VER_HISTORIAL_SOLICITUDES_PROPIAS') ||
+                                                 tiene_permiso('VER_MIS_VACACIONES') ||
+                                                 tiene_permiso('VER_MIS_MATERIALES_ENTREGADOS') ||
+                                                 tiene_permiso('VER_INFO_PERSONAL_RRHH'); // Añadido el nuevo permiso general
+
+            // Comentario: Permisos para roles de aprobación y gestión de solicitudes (que no sean los de arriba)
+            $puede_gestionar_solicitudes_nivel_superior = tiene_permiso('APROBAR_VACACIONES_MAE') ||
+                                                       tiene_permiso('APROBAR_SOLICITUDES_ADMIN') ||
+                                                       tiene_permiso('REGISTRAR_SOLICITUD_ESCANEO');
+
+
+            if ($puede_ver_menu_tramites_funcionario || $puede_gestionar_solicitudes_nivel_superior):
+            ?>
                 <li class="dropdown">
-                    <a href="#" class="<?php echo (strpos($vista_actual, 'solicitud') === 0 || strpos($vista_actual, 'vacaciones_') === 0) ? 'activo' : ''; ?>">Solicitudes</a>
+                    <a href="#" class="<?php echo (strpos($vista_actual, 'solicitud_') === 0 || strpos($vista_actual, 'vacaciones_') === 0 || $vista_actual == 'mis_datos_rrhh' || $vista_actual == 'registro_solicitud_escaneada') ? 'activo' : ''; ?>">Trámites y Solicitudes</a>
                     <ul class="dropdown-menu">
-                        <?php if (tiene_permiso('SOLICITAR_VACACION')): ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitud_vacacion" class="<?php echo ($vista_actual == 'solicitud_vacacion') ? 'activo-sub' : ''; ?>">Pedir Vacación</a></li>
+                        <?php if (tiene_permiso('DESCARGAR_FORMULARIOS')): // Para todos los funcionarios según el nuevo flujo ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitud_vacacion" class="<?php echo ($vista_actual == 'solicitud_vacacion') ? 'activo-sub' : ''; ?>">Descargar Form. Vacación</a></li>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitud_material" class="<?php echo ($vista_actual == 'solicitud_material') ? 'activo-sub' : ''; ?>">Descargar Form. Material</a></li>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitud_activo" class="<?php echo ($vista_actual == 'solicitud_activo') ? 'activo-sub' : ''; ?>">Descargar Form. Activo</a></li>
                         <?php endif; ?>
-                        <?php if (tiene_permiso('SOLICITAR_MATERIAL')): ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitud_material" class="<?php echo ($vista_actual == 'solicitud_material') ? 'activo-sub' : ''; ?>">Pedir Material</a></li>
-                        <?php endif; ?>
-                        <?php if (tiene_permiso('SOLICITAR_ACTIVO')): ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitud_activo" class="<?php echo ($vista_actual == 'solicitud_activo') ? 'activo-sub' : ''; ?>">Pedir Activo</a></li>
-                        <?php endif; ?>
+
                         <?php if (tiene_permiso('VER_HISTORIAL_SOLICITUDES_PROPIAS')): ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitudes_historial" class="<?php echo ($vista_actual == 'solicitudes_historial') ? 'activo-sub' : ''; ?>">Mis Solicitudes</a></li>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitudes_historial" class="<?php echo ($vista_actual == 'solicitudes_historial') ? 'activo-sub' : ''; ?>">Estado de Mis Solicitudes</a></li>
                         <?php endif; ?>
-                        <?php if (tiene_permiso('CONTROLAR_SOLICITUDES_VACACION_SECRETARIA')): // Secretaria ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=vacaciones_control_secretaria" class="<?php echo ($vista_actual == 'vacaciones_control_secretaria') ? 'activo-sub' : ''; ?>">Control Vacaciones (Sec.)</a></li>
+                         <?php if (tiene_permiso('VER_INFO_PERSONAL_RRHH')): // Nuevo enlace unificado ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=mis_datos_rrhh" class="<?php echo ($vista_actual == 'mis_datos_rrhh') ? 'activo-sub' : ''; ?>">Mi Info RRHH (Vacaciones/Materiales)</a></li>
                         <?php endif; ?>
-                        <?php if (tiene_permiso('APROBAR_VACACIONES_MAE')): // MAE ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=vacaciones_aprobacion_mae" class="<?php echo ($vista_actual == 'vacaciones_aprobacion_mae') ? 'activo-sub' : ''; ?>">Aprobar Vacaciones (MAE)</a></li>
+
+                        <?php if (tiene_permiso('REGISTRAR_SOLICITUD_ESCANEO')): // Enc. Activos Fijos / Dir. Admin ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=registro_solicitud_escaneada" class="<?php echo ($vista_actual == 'registro_solicitud_escaneada') ? 'activo-sub' : ''; ?>">Registrar Solicitud Escaneada</a></li>
                         <?php endif; ?>
-                        <?php if (tiene_permiso('APROBAR_SOLICITUDES_ADMIN')): // Dir. Admin ?>
-                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitudes_aprobacion_admin" class="<?php echo ($vista_actual == 'solicitudes_aprobacion_admin') ? 'activo-sub' : ''; ?>">Aprobar Mat./Act. (Admin)</a></li>
+
+                        <?php if (tiene_permiso('APROBAR_VACACIONES_MAE')): // MAE sigue aprobando (aunque el registro es de Secretaría) ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=vacaciones_aprobacion_mae" class="<?php echo ($vista_actual == 'vacaciones_aprobacion_mae') ? 'activo-sub' : ''; ?>">Bandeja Aprob. Vacaciones (MAE)</a></li>
+                        <?php endif; ?>
+                        <?php if (tiene_permiso('APROBAR_SOLICITUDES_ADMIN')): ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=solicitudes_aprobacion_admin" class="<?php echo ($vista_actual == 'solicitudes_aprobacion_admin') ? 'activo-sub' : ''; ?>">Aprobar Sol. Mat./Act. (Admin)</a></li>
                         <?php endif; ?>
                     </ul>
                 </li>
@@ -186,6 +213,9 @@ if (verificar_sesion() && $id_usuario_actual && isset($_SESSION['id_rol'])) {
                         <?php endif; ?>
                         <?php if (tiene_permiso('VER_REPORTE_VACACIONES_PERSONAL')): ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=admin_reporte_vacaciones" class="<?php echo ($vista_actual == 'admin_reporte_vacaciones') ? 'activo-sub' : ''; ?>">Reporte Vacaciones Personal</a></li>
+                        <?php endif; ?>
+                        <?php if (tiene_permiso('REGISTRAR_SOLICITUD_ESCANEO') && $rol_usuario_actual === 'Director Administrativo'): // Específico para Dir. Admin en este menú ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=registro_solicitud_escaneada" class="<?php echo ($vista_actual == 'registro_solicitud_escaneada') ? 'activo-sub' : ''; ?>">Registrar Solicitud Escaneada</a></li>
                         <?php endif; ?>
                     </ul>
                 </li>
@@ -250,6 +280,9 @@ if (verificar_sesion() && $id_usuario_actual && isset($_SESSION['id_rol'])) {
                         <?php endif; ?>
                         <?php if (tiene_permiso('GESTIONAR_STOCK_MATERIALES') && $rol_usuario_actual === 'Encargado de Activos Fijos'): ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=gestion_materiales_stock" class="<?php echo ($vista_actual == 'gestion_materiales_stock') ? 'activo-sub' : ''; ?>">Catálogo Materiales (Stock)</a></li>
+                        <?php endif; ?>
+                        <?php if (tiene_permiso('REGISTRAR_SOLICITUD_ESCANEO') && $rol_usuario_actual === 'Encargado de Activos Fijos'): ?>
+                            <li><a href="<?php echo BASE_URL; ?>index.php?vista=registro_solicitud_escaneada" class="<?php echo ($vista_actual == 'registro_solicitud_escaneada') ? 'activo-sub' : ''; ?>">Registrar Solicitud Escaneada</a></li>
                         <?php endif; ?>
                          <?php if (tiene_permiso('VER_STOCK_MATERIALES') && $rol_usuario_actual === 'Encargado de Activos Fijos'): // Si el de activos fijos también puede ver el reporte consolidado ?>
                             <li><a href="<?php echo BASE_URL; ?>index.php?vista=reporte_materiales_stock" class="<?php echo ($vista_actual == 'reporte_materiales_stock') ? 'activo-sub' : ''; ?>">Reporte Stock/Movimientos</a></li>
